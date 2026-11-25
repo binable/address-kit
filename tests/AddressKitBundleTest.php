@@ -9,6 +9,7 @@ use Binable\AddressKit\Model\Address;
 use Binable\AddressKit\Validator\Constraints\HouseNumberInRange;
 use Binable\AddressKit\Validator\Constraints\KnownStreet;
 use Binable\AddressKit\Normalizer\AddressNormalizer;
+use Binable\AddressKit\Normalizer\CountryNormalizer;
 use Binable\AddressKit\Normalizer\EncodingNormalizer;
 use Binable\AddressKit\Permutation\AddressPermutator;
 use Binable\AddressKit\Tests\App\TestKernel;
@@ -49,6 +50,14 @@ final class AddressKitBundleTest extends TestCase
         $encoding = $container->get(EncodingNormalizer::class);
         self::assertInstanceOf(EncodingNormalizer::class, $encoding);
         self::assertSame("O'Connell", $encoding->normalizeString('Oâ€™Connell'));
+
+        // country steps are wired via tag
+        $country = $container->get(CountryNormalizer::class);
+        self::assertInstanceOf(CountryNormalizer::class, $country);
+        self::assertSame('LI', $country->toAlpha2('FL'));
+        self::assertSame('CH', $country->toAlpha2('CHE'));
+        self::assertSame('NL', $country->toAlpha2('Niederlande'));
+        self::assertSame('DE', $normalizer->normalize(new Address(city: 'Berlin', country: 'D'))->country);
 
         $permutator = $container->get(AddressPermutator::class);
         self::assertInstanceOf(AddressPermutator::class, $permutator);

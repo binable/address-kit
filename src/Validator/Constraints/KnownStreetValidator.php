@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Validator\Constraints;
 
-use Binable\AddressKit\Matching\StreetTypo;
 use Binable\AddressKit\Model\Address;
 use Binable\AddressKit\Permutation\AddressPermutator;
-use Binable\AddressKit\Register\StreetRegisterInterface;
+use Binable\AddressKit\Validator\StreetRegisterInterface;
 use Symfony\Component\PropertyAccess\Exception\ExceptionInterface as PropertyAccessException;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -19,6 +18,12 @@ use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
 final class KnownStreetValidator extends ConstraintValidator
 {
+    /**
+     * Typo suggestions are only made for names of at least this many characters - short names lie
+     * one letter apart from each other all the time ("Hof"/"Hohe"), long ones practically never.
+     */
+    public const TYPO_MIN_LENGTH = 8;
+
     private readonly AddressPermutator $permutator;
     private readonly PropertyAccessorInterface $propertyAccessor;
 
@@ -67,7 +72,7 @@ final class KnownStreetValidator extends ConstraintValidator
             }
         }
 
-        $suggestion = StreetTypo::findUnique($tried, $known);
+        $suggestion = $this->findUniqueTypo($tried, $known);
         if (null !== $suggestion && $constraint->allowTypos) {
             return;
         }
@@ -153,5 +158,66 @@ final class KnownStreetValidator extends ConstraintValidator
         $value = trim((string) $value);
 
         return '' === $value ? null : $value;
+    }
+
+    /**
+     * Finds the one known street a tried spelling misses by a single letter: "Paul-Gerhard-Allee"
+     * for "Paul-Gerhardt-Allee", "Bürgermeister-Spitta-Alle" for "…-Allee". Only a unique hit
+     * counts, and only for spellings of at least {@see TYPO_MIN_LENGTH} characters.
+     *
+     * The distance is counted in characters, not bytes: "Mullerstraße" is one letter away from
+     * "Müllerstraße".
+     *
+     * @param list<string> $tried the street and its permutations
+     * @param list<string> $known the known street names
+     *
+     * @return string|null the known spelling of the unique hit
+     */
+    private function findUniqueTypo(array $tried, array $known): ?string
+    {
+        $lowered = [];
+        foreach ($known as $candidate) {
+            $lowered[$candidate] = mb_strtolower(trim($candidate));
+        }
+
+        $found = [];
+        foreach ($tried as $street) {
+            $needle = mb_strtolower(trim($street));
+            if (mb_strlen($needle) < self::TYPO_MIN_LENGTH) {
+                continue;
+            }
+
+            foreach ($lowered as $candidate => $name) {
+                if (1 === $this->distance($needle, $name)) {
+                    $found[(string) $candidate] = true;
+                }
+            }
+        }
+
+        return 1 === \count($found) ? (string) array_key_first($found) : null;
+    }
+
+    /**
+     * Levenshtein distance in characters. PHP's levenshtein() counts bytes, so every character is
+     * mapped to a single byte first (fine as long as both strings together use at most 256 distinct
+     * characters, which a street name always does).
+     */
+    private function distance(string $a, string $b): int
+    {
+        $map = [];
+        $encode = static function (string $value) use (&$map): string {
+            $encoded = '';
+            foreach (mb_str_split($value) as $character) {
+                $map[$character] ??= \chr(\count($map) % 256);
+                $encoded .= $map[$character];
+            }
+
+            return $encoded;
+        };
+
+        $encodedA = $encode($a);
+        $encodedB = $encode($b);
+
+        return \count($map) > 256 ? levenshtein($a, $b) : levenshtein($encodedA, $encodedB);
     }
 }

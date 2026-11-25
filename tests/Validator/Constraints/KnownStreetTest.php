@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Tests\Validator\Constraints;
 
 use Binable\AddressKit\Model\Address;
-use Binable\AddressKit\Register\StreetRegisterInterface;
 use Binable\AddressKit\Validator\Constraints\KnownStreet;
 use Binable\AddressKit\Validator\Constraints\KnownStreetValidator;
+use Binable\AddressKit\Validator\StreetRegisterInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidatorFactory;
@@ -45,6 +45,32 @@ final class KnownStreetTest extends ConstraintTestCase
         self::assertCount(1, $violations);
         self::assertSame(KnownStreet::TYPO_ERROR, $violations->get(0)->getCode());
         self::assertSame('The street "Paul-Gerhard-Allee" is unknown. Did you mean "Paul-Gerhardt-Allee"?', (string) $violations->get(0)->getMessage());
+    }
+
+    #[TestWith(['Paul-Gerhard-Allee', 'Paul-Gerhardt-Allee'])]
+    #[TestWith(['Bürgermeister-Spitta-Alle', 'Bürgermeister-Spitta-Allee'])]
+    #[TestWith(['paul-gerhardt-alle', 'Paul-Gerhardt-Allee'])]
+    #[TestWith(['Mullerstraße', 'Müllerstraße'], 'distance counts characters, not bytes')]
+    #[TestWith(['Mülerstr.', 'Müllerstraße'], 'permutations count')]
+    public function testTypoSuggestion(string $value, string $suggestion): void
+    {
+        $streets = ['Paul-Gerhardt-Allee', 'Bürgermeister-Spitta-Allee', 'Müllerstraße', 'Hof', 'Hohe'];
+        $violations = $this->validator->validate($value, new KnownStreet(streets: $streets, country: 'DE'));
+
+        self::assertCount(1, $violations);
+        self::assertSame(KnownStreet::TYPO_ERROR, $violations->get(0)->getCode());
+        self::assertSame('"'.$suggestion.'"', $violations->get(0)->getParameters()['{{ suggestion }}']);
+    }
+
+    /**
+     * @param list<string> $streets
+     */
+    #[TestWith(['Hoh', ['Hof', 'Hohe']], 'too short')]
+    #[TestWith(['Paul-Gerhrd-Alle', ['Paul-Gerhardt-Allee']], 'two letters off')]
+    #[TestWith(['Lindenweg', ['Lindenwek', 'Lindenwef']], 'ambiguous')]
+    public function testNoTypoSuggestion(string $value, array $streets): void
+    {
+        $this->assertViolation(KnownStreet::UNKNOWN_STREET_ERROR, $value, new KnownStreet(streets: $streets));
     }
 
     public function testTypoAllowed(): void

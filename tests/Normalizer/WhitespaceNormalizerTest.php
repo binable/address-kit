@@ -94,12 +94,20 @@ final class WhitespaceNormalizerTest extends TestCase
     {
         $normalizer = WhitespaceNormalizer::createDefault();
 
-        self::assertSame('Max-Planck-Str. 1 (2. OG)', $normalizer->normalize(' ,Max - Planck - Str . 1 ( 2. OG ) ,'));
-        self::assertNull($normalizer->normalize(' , . '));
-        self::assertNull($normalizer->normalize(null));
+        self::assertSame('Max-Planck-Str. 1 (2. OG)', $normalizer->normalizeString(' ,Max - Planck - Str . 1 ( 2. OG ) ,'));
+        self::assertSame('', $normalizer->normalizeString(' , . '));
     }
 
-    public function testUsedByComponentNormalizers(): void
+    public function testAddress(): void
+    {
+        $normalized = WhitespaceNormalizer::createDefault()->normalize(
+            new Address(' Am  Markt ,', ' 12 - 14', null, ' , . ', 'DE'),
+        );
+
+        self::assertTrue((new Address('Am Markt', '12-14', null, null, 'DE'))->equals($normalized), var_export($normalized, true));
+    }
+
+    public function testRunsBeforeComponentNormalizers(): void
     {
         $normalized = AddressNormalizer::createDefault()->normalize(
             new Address(' Max - Planck - Str. ', '12 - 14 ,', ' 33330 ', 'Gütersloh,', ' DE ,'),

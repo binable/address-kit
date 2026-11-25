@@ -5,41 +5,48 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Normalizer;
 
 use Binable\AddressKit\Model\Address;
-use Binable\AddressKit\Model\AddressField;
+use Binable\AddressKit\Normalizer\Country\Alpha2Normalizer;
+use Binable\AddressKit\Normalizer\Country\Alpha3Normalizer;
+use Binable\AddressKit\Normalizer\Country\CountryCodeNormalizerInterface;
+use Binable\AddressKit\Normalizer\Country\CountryNameNormalizer;
+use Binable\AddressKit\Normalizer\Country\VehicleRegistrationCodeNormalizer;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
-use Symfony\Component\Intl\Countries;
-use Symfony\Component\Intl\Exception\MissingResourceException;
 
 /**
  * Converts the country to an upper-case ISO 3166-1 alpha-2 code.
  *
- * Accepts alpha-2 ("de"), alpha-3 ("DEU") and country names in German or English ("Deutschland", "Germany").
+ The country steps tagged "address_kit.country_normalizer" run in priority order, the first match wins.
+ * Built-in steps:
+ *
+ *  300 {@see Alpha3Normalizer}                  "DEU" → "DE"
+ *  200 {@see VehicleRegistrationCodeNormalizer} "D" → "DE", "A" → "AT", "FL" → "LI"
+ *  100 {@see CountryNameNormalizer}             "Deutschland", "Germany" → "DE"
+ * -100 {@see Alpha2Normalizer}                  "de" → "DE"
+ *
+ * Unknown values are kept, an empty country becomes the default country.
  * Runs first, as other normalizers may depend on the country.
  */
 #[AsTaggedItem(priority: 100)]
-final class CountryNormalizer implements ComponentNormalizerInterface
+final readonly class CountryNormalizer implements ComponentNormalizerInterface
 {
     /**
-     * @var array<string, string>|null lower-cased country name => alpha-2
+     * @var iterable<CountryCodeNormalizerInterface>
      */
-    private ?array $nameMap = null;
-
-    private readonly WhitespaceNormalizer $whitespace;
+    private iterable $normalizers;
 
     /**
-     * @param list<string> $nameLocales locales used to resolve country names
+     * @param iterable<CountryCodeNormalizerInterface>|null $normalizers null for the built-in steps
      */
     public function __construct(
-        private readonly ?string $defaultCountry = null,
-        private readonly array $nameLocales = ['de', 'en'],
-        ?WhitespaceNormalizer $whitespace = null,
+        private ?string $defaultCountry = null,
+        ?iterable $normalizers = null,
     ) {
-        $this->whitespace = $whitespace ?? WhitespaceNormalizer::createDefault();
+        $this->normalizers = $normalizers ?? self::defaultNormalizers();
     }
 
     public function normalize(Address $address): Address
     {
-        $country = $this->whitespace->normalize($address->country, AddressField::Country);
+        $country = $address->country;
 
         if (null === $country) {
             return $address->withCountry($this->defaultCountry);
@@ -48,39 +55,31 @@ final class CountryNormalizer implements ComponentNormalizerInterface
         return $address->withCountry($this->toAlpha2($country) ?? $country);
     }
 
+    /**
+     * Resolves a single value, null if it is not recognized.
+     */
     public function toAlpha2(string $country): ?string
     {
-        $upper = mb_strtoupper($country);
-
-        if (2 === \strlen($upper) && Countries::exists($upper)) {
-            return $upper;
-        }
-
-        if (3 === \strlen($upper) && Countries::alpha3CodeExists($upper)) {
-            try {
-                return Countries::getAlpha2Code($upper);
-            } catch (MissingResourceException) {
-                return null;
+        foreach ($this->normalizers as $normalizer) {
+            $code = $normalizer->toAlpha2($country);
+            if (null !== $code) {
+                return $code;
             }
         }
 
-        return $this->nameMap()[mb_strtolower($country)] ?? null;
+        return null;
     }
 
     /**
-     * @return array<string, string>
+     * @return list<CountryCodeNormalizerInterface>
      */
-    private function nameMap(): array
+    public static function defaultNormalizers(): array
     {
-        if (null === $this->nameMap) {
-            $this->nameMap = [];
-            foreach ($this->nameLocales as $locale) {
-                foreach (Countries::getNames($locale) as $code => $name) {
-                    $this->nameMap[mb_strtolower($name)] ??= $code;
-                }
-            }
-        }
-
-        return $this->nameMap;
+        return [
+            new Alpha3Normalizer(),
+            new VehicleRegistrationCodeNormalizer(),
+            new CountryNameNormalizer(),
+            new Alpha2Normalizer(),
+        ];
     }
 }

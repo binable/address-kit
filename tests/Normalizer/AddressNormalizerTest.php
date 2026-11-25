@@ -30,6 +30,7 @@ final class AddressNormalizerTest extends TestCase
         $normalized = AddressNormalizer::createDefault('AT')->normalize(new Address(city: 'Wien'));
 
         self::assertSame('AT', $normalized->country);
+        self::assertSame('AT', AddressNormalizer::createDefault('AT')->normalize(new Address(country: ' , '))->country);
     }
 
     #[DataProvider('countryProvider')]
@@ -69,16 +70,16 @@ final class AddressNormalizerTest extends TestCase
         yield ['Berliner Str. 5', 'Berliner Straße', '5'];
         yield ['Str. des 17. Juni', 'Straße des 17. Juni', null];
         yield ['Marktpl. 1-3', 'Marktpl.', '1-3'];
-        yield ['Am  Markt', 'Am Markt', null];
+        yield ['Am Markt', 'Am Markt', null];
     }
 
     public function testHouseNumber(): void
     {
         $normalizer = new HouseNumberNormalizer();
 
-        self::assertSame('12a', $normalizer->normalize(new Address(houseNumber: ' 12 A'))->houseNumber);
+        self::assertSame('12a', $normalizer->normalize(new Address(houseNumber: '12 A'))->houseNumber);
         self::assertSame('12-14', $normalizer->normalize(new Address(houseNumber: '12 - 14'))->houseNumber);
-        self::assertNull($normalizer->normalize(new Address(houseNumber: '  '))->houseNumber);
+        self::assertNull($normalizer->normalize(new Address())->houseNumber);
     }
 
     public function testZipCode(): void
@@ -86,7 +87,7 @@ final class AddressNormalizerTest extends TestCase
         $normalizer = new ZipCodeNormalizer();
 
         self::assertSame('10115', $normalizer->normalize(new Address(zipCode: 'DE-10115', country: 'DE'))->zipCode);
-        self::assertSame('SW1A 1AA', $normalizer->normalize(new Address(zipCode: 'sw1a  1aa', country: 'GB'))->zipCode);
+        self::assertSame('SW1A 1AA', $normalizer->normalize(new Address(zipCode: 'sw1a 1aa', country: 'GB'))->zipCode);
     }
 
     public function testCity(): void

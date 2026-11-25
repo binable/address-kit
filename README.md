@@ -83,25 +83,23 @@ but it skips blank values.
 
 Only the first number of the house number counts: `12a`, `12/3` and `12-14` are compared as `12`; a house
 number without digits is never in range. An invalid range throws a `ConstraintDefinitionException`.
-The check itself is available as service `Matching\HouseNumberRange` (`contains('12a', '1-50, 60+')`).
 
 #### KnownStreet
 
 The street is valid when it, or one of its [permutations](#permutation) (`Hauptstr.`, `Muellerweg`, …),
 matches a known street case-insensitively. Otherwise, if exactly one known street is a single letter
-away (`Paul-Gerhard-Allee` → `Paul-Gerhardt-Allee`, only for names of 8+ characters, see
-`Matching\StreetTypo`), the violation `TYPO_ERROR` carries it as `{{ suggestion }}`; with
-`allowTypos: true` it is accepted. Anything else is an `UNKNOWN_STREET_ERROR`.
+away (`Paul-Gerhard-Allee` → `Paul-Gerhardt-Allee`, only for names of 8+ characters), the
+violation `TYPO_ERROR` carries it as `{{ suggestion }}`; with `allowTypos: true` it is accepted. Anything else is an `UNKNOWN_STREET_ERROR`.
 
 Known streets come from the `streets` option or from your implementation of
-`Register\StreetRegisterInterface`, which gets an `Address` built from the validated object
+`Validator\StreetRegisterInterface`, which gets an `Address` built from the validated object
 (`zipCodePath`, `cityPath`, `countryPath`) and returns the streets of that area – an empty result skips
 the check. The country (fixed `country` option › object › `default_country`) selects the language
 specific permutations.
 
 ```yaml
 services:
-    Binable\AddressKit\Register\StreetRegisterInterface: '@App\Address\StreetRegister'
+    Binable\AddressKit\Validator\StreetRegisterInterface: '@App\Address\StreetRegister'
 ```
 
 ```php
@@ -140,7 +138,8 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 | Normalizer             | Example                                                         |
 |------------------------|-----------------------------------------------------------------|
 | `EncodingNormalizer`   | Encoding cleanup of all fields, see below (runs first)          |
-| `CountryNormalizer`    | `Deutschland`, `deu`, `de` → `DE`; empty → `default_country`     |
+| `WhitespaceNormalizer` | Whitespace and punctuation cleanup of all fields, see below (runs second) |
+| `CountryNormalizer`    | `Deutschland`, `deu`, `D`, `de` → `DE`; empty → `default_country` (see below) |
 | `StreetNormalizer`     | `Hauptstr. 12 A` → street `Hauptstraße`, house number `12 A`    |
 | `HouseNumberNormalizer`| `12 A` → `12a`, `12 - 14` → `12-14`                             |
 | `ZipCodeNormalizer`    | `d-10115` → `10115`, `sw1a 1aa` → `SW1A 1AA`                    |
@@ -149,6 +148,28 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 ```php
 $normalized = $addressNormalizer->normalize(new Address('Hauptstr. 12 A', null, 'D-10115', 'BERLIN', 'Germany'));
 // Address('Hauptstraße', '12a', '10115', 'Berlin', 'DE')
+```
+
+### Country
+
+`CountryNormalizer` runs the country through the steps
+tagged `address_kit.country_normalizer` (autoconfigured for `Country\CountryCodeNormalizerInterface`, ordered by
+priority); the first step returning a code wins. Unknown values are kept as they are.
+
+| Priority | Step                                | Example                                                                  |
+|----------|-------------------------------------|--------------------------------------------------------------------------|
+| 300      | `Alpha3Normalizer`                  | ISO alpha-3: `DEU` → `DE`, `aut` → `AT`                                   |
+| 200      | `VehicleRegistrationCodeNormalizer` | international vehicle registration code: `D` → `DE`, `A` → `AT`, `FL` → `LI`, `U.S.A.` → `US` |
+| 100      | `CountryNameNormalizer`             | name in `de` / `en` (configurable) plus common aliases: `Deutschland`, `Germany`, `Osterreich`, `Holland` |
+| -100     | `Alpha2Normalizer`                  | ISO alpha-2, upper-cased: `de` → `DE`                                     |
+
+Some vehicle registration codes are different ISO codes; there ISO wins (`ES` → Spain, not El Salvador;
+`ROU` → Romania, not Uruguay): the vehicle step skips valid alpha-2 codes. Each step can be used on its own,
+e.g. `(new VehicleRegistrationCodeNormalizer())->toAlpha2('FL')`.
+
+```php
+$countryNormalizer->toAlpha2('FL');          // "LI"
+$countryNormalizer->toAlpha2('Niederlande'); // "NL"
 ```
 
 ### Encoding
@@ -180,10 +201,10 @@ Add your own step by implementing `Encoding\EncodingNormalizerInterface` and set
 
 ### Whitespace and punctuation
 
-`WhitespaceNormalizer` cleans spaces and punctuation of a single value. It is used by the component
-normalizers (country, street, house number, ZIP code, city) for their field and runs all string normalizers
-tagged `address_kit.whitespace_normalizer` (autoconfigured for `Whitespace\WhitespaceNormalizerInterface`,
-ordered by priority). Values that are empty after cleaning become `null`.
+`WhitespaceNormalizer` cleans spaces and punctuation of every address field. It runs right after the
+`EncodingNormalizer` and before the component normalizers (country, street, house number, ZIP code, city),
+so these already get cleaned values. It runs all string normalizers tagged `address_kit.whitespace_normalizer`
+(autoconfigured for `Whitespace\WhitespaceNormalizerInterface`, ordered by priority). Values that are empty after cleaning become `null`.
 
 | Priority | Step                           | Example                                                                     |
 |----------|--------------------------------|-----------------------------------------------------------------------------|
@@ -194,7 +215,7 @@ ordered by priority). Values that are empty after cleaning become `null`.
 | 100      | `EdgePunctuationNormalizer`    | `, Hauptstraße` → `Hauptstraße`, `Gütersloh,` → `Gütersloh`; keeps `Str.`, `a.M.` |
 
 ```php
-$whitespaceNormalizer->normalize(' ,Max - Planck - Str . 1 ( 2. OG ) ,'); // "Max-Planck-Str. 1 (2. OG)"
+$whitespaceNormalizer->normalizeString(' ,Max - Planck - Str . 1 ( 2. OG ) ,'); // "Max-Planck-Str. 1 (2. OG)"
 ```
 
 Add your own step by implementing `Whitespace\WhitespaceNormalizerInterface`. Both step interfaces extend

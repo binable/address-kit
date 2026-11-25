@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Validator\Constraints;
 
-use Binable\AddressKit\Matching\HouseNumberRange;
 use Symfony\Component\Validator\Attribute\HasNamedArguments;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Exception\ConstraintDefinitionException;
@@ -13,7 +12,7 @@ use Symfony\Component\Validator\Exception\ConstraintDefinitionException;
  * Special case: the house number must lie within a range expression, e.g. the house numbers a
  * delivery area or a building covers.
  *
- * Expression formats ({@see HouseNumberRange}): "5", "1-50", "4+" (4 and above), "3-" (3 and below)
+ * Expression formats ({@see HouseNumberInRangeValidator}): "5", "1-50", "4+" (4 and above), "3-" (3 and below)
  * and comma separated combinations ("1-10, 20-30"). Only the first number of the house number counts:
  * "12a", "12/3" and "12-14" are all compared as 12.
  */
@@ -33,7 +32,7 @@ final class HouseNumberInRange extends Constraint
         ?array $groups = null,
         mixed $payload = null,
     ) {
-        if (!(new HouseNumberRange())->isValidExpression($range)) {
+        if (!HouseNumberInRangeValidator::isValidExpression($range)) {
             throw new ConstraintDefinitionException(\sprintf('The range "%s" of constraint "%s" is invalid. Use e.g. "5", "1-50", "4+", "3-" or "1-10, 20-30".', $range, self::class));
         }
 

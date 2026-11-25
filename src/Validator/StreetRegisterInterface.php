@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Binable\AddressKit\Register;
+namespace Binable\AddressKit\Validator;
 
 use Binable\AddressKit\Model\Address;
 
@@ -14,7 +14,7 @@ use Binable\AddressKit\Model\Address;
  * Register your implementation as the service for this interface:
  *
  *     services:
- *         Binable\AddressKit\Register\StreetRegisterInterface: '@App\Address\MyStreetRegister'
+ *         Binable\AddressKit\Validator\StreetRegisterInterface: '@App\Address\MyStreetRegister'
  */
 interface StreetRegisterInterface
 {

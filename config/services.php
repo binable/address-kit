@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Binable\AddressKit\AddressKitBundle;
 use Binable\AddressKit\Language\StreetLanguageMap;
-use Binable\AddressKit\Matching\HouseNumberRange;
 use Binable\AddressKit\Normalizer\AddressNormalizer;
 use Binable\AddressKit\Normalizer\CountryNormalizer;
 use Binable\AddressKit\Normalizer\EncodingNormalizer;
@@ -35,6 +34,7 @@ return static function (ContainerConfigurator $container): void {
 
     $services->load('Binable\\AddressKit\\Normalizer\\Encoding\\', '../src/Normalizer/Encoding/*Normalizer.php');
     $services->load('Binable\\AddressKit\\Normalizer\\Whitespace\\', '../src/Normalizer/Whitespace/*Normalizer.php');
+    $services->load('Binable\\AddressKit\\Normalizer\\Country\\', '../src/Normalizer/Country/*Normalizer.php');
 
     $services->set(EncodingNormalizer::class)
         ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_ENCODING_NORMALIZER))
@@ -45,7 +45,9 @@ return static function (ContainerConfigurator $container): void {
         ->public();
 
     $services->set(CountryNormalizer::class)
-        ->arg('$defaultCountry', param('address_kit.default_country'));
+        ->arg('$defaultCountry', param('address_kit.default_country'))
+        ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_COUNTRY_NORMALIZER))
+        ->public();
 
     $services->set(AddressNormalizer::class)
         ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_NORMALIZER))
@@ -62,8 +64,5 @@ return static function (ContainerConfigurator $container): void {
     $services->set(AddressPermutator::class)
         ->arg('$strategies', tagged_iterator(AddressKitBundle::TAG_PERMUTATION_STRATEGY))
         ->arg('$maxPermutations', param('address_kit.max_permutations'))
-        ->public();
-
-    $services->set(HouseNumberRange::class)
         ->public();
 };

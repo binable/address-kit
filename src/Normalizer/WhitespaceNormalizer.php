@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Normalizer;
 
+use Binable\AddressKit\Model\Address;
 use Binable\AddressKit\Model\AddressField;
 use Binable\AddressKit\Normalizer\Whitespace\BracketSpacingNormalizer;
 use Binable\AddressKit\Normalizer\Whitespace\CollapseWhitespaceNormalizer;
@@ -11,9 +12,10 @@ use Binable\AddressKit\Normalizer\Whitespace\EdgePunctuationNormalizer;
 use Binable\AddressKit\Normalizer\Whitespace\HyphenSpacingNormalizer;
 use Binable\AddressKit\Normalizer\Whitespace\PunctuationSpacingNormalizer;
 use Binable\AddressKit\Normalizer\Whitespace\WhitespaceNormalizerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * Cleans whitespace and punctuation of a single value by running the string normalizers tagged
+ * Cleans whitespace and punctuation of all address fields by running the string normalizers tagged
  * "address_kit.whitespace_normalizer" in priority order. Built-in steps:
  *
  *  500 {@see CollapseWhitespaceNormalizer} trim, collapse repeated whitespace
@@ -22,9 +24,11 @@ use Binable\AddressKit\Normalizer\Whitespace\WhitespaceNormalizerInterface;
  *  200 {@see HyphenSpacingNormalizer}      "Max - Planck - Str." → "Max-Planck-Str.", "12 - 14" → "12-14"
  *  100 {@see EdgePunctuationNormalizer}    punctuation at start / end, keeps abbreviation dots ("Str.")
  *
- * Used by the component normalizers (street, house number, ZIP code, city, country) for their field.
+ * Runs right after the {@see EncodingNormalizer} and before the component normalizers (country, street,
+ * house number, ZIP code, city), so these get cleaned values. Values that are empty after cleaning become null.
  */
-final readonly class WhitespaceNormalizer
+#[AsTaggedItem(priority: 150)]
+final readonly class WhitespaceNormalizer implements ComponentNormalizerInterface
 {
     /**
      * @param iterable<WhitespaceNormalizerInterface> $normalizers
@@ -34,22 +38,29 @@ final readonly class WhitespaceNormalizer
     ) {
     }
 
-    /**
-     * Returns null for null and for values that are empty after cleaning.
-     */
-    public function normalize(?string $value, ?AddressField $field = null): ?string
+    public function normalize(Address $address): Address
     {
-        if (null === $value) {
-            return null;
+        foreach (AddressField::cases() as $field) {
+            $value = $address->get($field);
+            if (null !== $value) {
+                $value = $this->normalizeString($value, $field);
+                $address = $address->with($field, '' === $value ? null : $value);
+            }
         }
 
+        return $address;
+    }
+
+    /**
+     * Cleans a single value, e.g. for usage outside of an {@see Address}.
+     */
+    public function normalizeString(string $value, ?AddressField $field = null): string
+    {
         foreach ($this->normalizers as $normalizer) {
             $value = $normalizer->normalize($value, $field);
         }
 
-        $value = trim($value);
-
-        return '' === $value ? null : $value;
+        return trim($value);
     }
 
     /**

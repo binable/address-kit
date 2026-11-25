@@ -14,11 +14,11 @@ use Symfony\Component\Validator\Constraint;
  * The street counts as known when it, or one of its permutations ("Hauptstr." for "Hauptstraße",
  * "Muellerweg" for "Müllerweg", …, see {@see \Binable\AddressKit\Permutation\AddressPermutator}),
  * matches a known street case-insensitively. Otherwise a known street that is exactly one letter
- * away and the only such street ({@see \Binable\AddressKit\Matching\StreetTypo}) is offered as
+ * away and the only such street (names of 8+ characters only) is offered as
  * suggestion ({@see TYPO_ERROR}, parameter "{{ suggestion }}"), or accepted with {@see $allowTypos}.
  *
  * Known streets come from {@see $streets} or from the
- * {@see \Binable\AddressKit\Register\StreetRegisterInterface} service, which gets an address built
+ * {@see \Binable\AddressKit\Validator\StreetRegisterInterface} service, which gets an address built
  * from the validated object (properties {@see $zipCodePath}, {@see $cityPath}, {@see $countryPath},
  * or the object itself if it is an {@see \Binable\AddressKit\Model\Address}). If the register knows
  * no streets for the address, the check is skipped.
