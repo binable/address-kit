@@ -39,17 +39,36 @@ final class AddressKitBundle extends AbstractBundle
                     ->defaultValue(50)
                     ->min(1)
                 ->end()
+                ->arrayNode('street_languages')
+                    ->info('Languages of the street names per country (ISO 3166-1 alpha-2 => ISO 639-1 codes). Replaces the built-in entry of the country, see StreetLanguageMap::DEFAULT; an empty list disables the language specific permutations for it.')
+                    ->example(['BE' => ['fr', 'nl', 'de'], 'IT' => ['it', 'de']])
+                    ->useAttributeAsKey('country')
+                    ->normalizeKeys(false)
+                    ->validate()
+                        ->ifTrue(static fn (mixed $v): bool => !\is_array($v) || [] !== array_filter(array_keys($v), static fn (int|string $k): bool => 1 !== preg_match('/^[A-Z]{2}$/', (string) $k)))
+                        ->thenInvalid('The keys of "street_languages" must be uppercase ISO 3166-1 alpha-2 codes, %s given.')
+                    ->end()
+                    ->arrayPrototype()
+                        ->scalarPrototype()
+                            ->validate()
+                                ->ifTrue(static fn (mixed $v): bool => !\is_string($v) || 1 !== preg_match('/^[a-z]{2}$/', $v))
+                                ->thenInvalid('A street language must be a lowercase ISO 639-1 code, %s given.')
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
             ->end();
     }
 
     /**
-     * @param array{default_country: string, max_permutations: int} $config
+     * @param array{default_country: string, max_permutations: int, street_languages: array<string, list<string>>} $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $container->parameters()
             ->set('address_kit.default_country', $config['default_country'])
-            ->set('address_kit.max_permutations', $config['max_permutations']);
+            ->set('address_kit.max_permutations', $config['max_permutations'])
+            ->set('address_kit.street_languages', $config['street_languages']);
 
         $builder->registerForAutoconfiguration(ComponentNormalizerInterface::class)
             ->addTag(self::TAG_NORMALIZER);

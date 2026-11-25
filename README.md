@@ -27,7 +27,11 @@ return [
 address_kit:
     default_country: DE     # used by the CountryNormalizer when an address has no country
     max_permutations: 50    # upper bound of variants returned by the AddressPermutator
+    street_languages:       # override the street name languages of a country (see Permutation → Languages)
+        BE: [fr, nl, de]
 ```
+
+`default_country` is also the fallback country of the `KnownStreet` constraint.
 
 ## Validator
 
@@ -69,9 +73,36 @@ Opt-in constraints for specific requirements, to combine with the main constrain
 | `StreetWithoutHouseNumber` | Street must not contain a house number (`Hauptstraße 12`), for a separate house number field | `pattern`, `message`                        |
 | `NoPostBox`                | Rejects `Postfach`, `PO Box`, … and parcel lockers (`Packstation`, `Postfiliale`, …)         | `allowParcelLockers`, messages              |
 | `NoPlaceholderValue`       | Rejects dummy input (`test`, `asdf`, `n/a`, `-`, `xxx`, `0000`, …)                           | `placeholders`, `extraPlaceholders`, `rejectRepeatedCharacters` |
+| `HouseNumberInRange`       | House number within a range expression: `5`, `1-50`, `4+`, `3-`, `1-10, 20-30`               | `range`, `message`                          |
+| `KnownStreet`              | Street must be known – fuzzy: permutations count, a unique one-letter typo gets a suggestion | `streets`, `allowTypos`, `country`, `zipCodePath`, `cityPath`, `countryPath`, messages |
 
 `OptionalSequentially` is the building block behind `required: false`: like Symfony's `Sequentially`,
 but it skips blank values.
+
+#### HouseNumberInRange
+
+Only the first number of the house number counts: `12a`, `12/3` and `12-14` are compared as `12`; a house
+number without digits is never in range. An invalid range throws a `ConstraintDefinitionException`.
+The check itself is available as service `Matching\HouseNumberRange` (`contains('12a', '1-50, 60+')`).
+
+#### KnownStreet
+
+The street is valid when it, or one of its [permutations](#permutation) (`Hauptstr.`, `Muellerweg`, …),
+matches a known street case-insensitively. Otherwise, if exactly one known street is a single letter
+away (`Paul-Gerhard-Allee` → `Paul-Gerhardt-Allee`, only for names of 8+ characters, see
+`Matching\StreetTypo`), the violation `TYPO_ERROR` carries it as `{{ suggestion }}`; with
+`allowTypos: true` it is accepted. Anything else is an `UNKNOWN_STREET_ERROR`.
+
+Known streets come from the `streets` option or from your implementation of
+`Register\StreetRegisterInterface`, which gets an `Address` built from the validated object
+(`zipCodePath`, `cityPath`, `countryPath`) and returns the streets of that area – an empty result skips
+the check. The country (fixed `country` option › object › `default_country`) selects the language
+specific permutations.
+
+```yaml
+services:
+    Binable\AddressKit\Register\StreetRegisterInterface: '@App\Address\StreetRegister'
+```
 
 ```php
 use Binable\AddressKit\Validator\Constraints as AddressAssert;
@@ -173,13 +204,75 @@ Add your own step by implementing `Whitespace\WhitespaceNormalizerInterface`. Bo
 
 `AddressPermutator` combines all services tagged `address_kit.permutation_strategy`
 (autoconfigured for `PermutationStrategyInterface`) and returns unique variants of an address,
-e.g. for fuzzy matching or search. The original address is always the first entry.
+e.g. for fuzzy matching or search. The original address is always the first entry. Every strategy is
+applied to every variant produced so far (ordered by `#[AsTaggedItem(priority: …)]`), until
+`max_permutations` is reached.
 
-| Strategy                  | Example                                                  |
-|---------------------------|----------------------------------------------------------|
-| `StreetSuffixPermutation` | `Hauptstraße` ⇄ `Hauptstr.` ⇄ `Haupt Straße` ⇄ `Haupt-Straße` |
-| `HouseNumberPermutation`  | `12a` ⇄ `12 a` ⇄ `12A` ⇄ `12 A`                           |
-| `UmlautPermutation`       | `Müllerstraße` → `Muellerstrasse`                        |
+### Languages
+
+Language specific strategies implement `LocalizedPermutationStrategyInterface` and live in a namespace
+named after their ISO 639-1 code (`Strategy\De`, `Strategy\Fr`, …). They only run for addresses whose
+country uses that language for street names, according to the `Language\StreetLanguageMap`:
+
+| Language | Countries (default)   |
+|----------|-----------------------|
+| `de`     | DE, AT, CH, LI        |
+| `fr`     | FR, BE, CH, LU, MC    |
+| `it`     | IT, CH, SM            |
+| `nl`     | NL                    |
+| `en`     | US (USPS abbreviations) |
+| `pl`     | PL                    |
+| `da`     | DK                    |
+
+A German address only gets the `de` strategies, a Swiss one `de`, `fr` and `it`. Addresses without a
+(known) country only get the language independent strategies. The defaults are conservative: Flanders and
+East Belgium (BE: `nl`, `de`) and South Tyrol (IT: `de`) are not listed. Override the entry of a country
+in the configuration (it replaces the default, `[]` disables the country):
+
+```yaml
+address_kit:
+    street_languages:
+        BE: [fr, nl, de]
+        IT: [it, de]
+```
+
+`$permutator->permute($address, ['de'])` sets the languages explicitly.
+
+### Strategies
+
+| Language | Strategy                         | Example                                                              |
+|----------|----------------------------------|----------------------------------------------------------------------|
+| –        | `HouseNumberInStreetPermutation` | `Denkstr. 19` → `Denkstr.` + house number `19`                        |
+| –        | `CasePermutation`                | `HAUPTSTRASSE` → `Hauptstrasse`, `straße im moos` → `Straße im Moos` |
+| –        | `HouseNumberPermutation`         | `12a` ⇄ `12 a` ⇄ `12A` ⇄ `12 A` (runs last)                          |
+| de       | `UmlautPermutation`              | `Müllerweg` ⇄ `Muellerweg`, `Schlossstraße` → `Schloßstraße`          |
+| de       | `HyphenPermutation`              | `Albert-Einstein-Straße` ⇄ `Albert Einstein Straße`                  |
+| de       | `PrepositionPermutation`         | `Am Freiheitsplatz` → `Freiheitsplatz`, `Alte Mühle` → `An der Alten Mühle` |
+| de       | `GrundwortPermutation`           | `Marktplatz` ⇄ `Markt Platz` ⇄ `Marktpl.`                            |
+| de       | `StrassePermutation`             | `Hauptstraße` ⇄ `Hauptstr.` ⇄ `Haupt Straße`, `Leipziger` → `Leipziger Straße` |
+| nl       | `StreetPermutation`              | `Burgemeester van der Vlugtstraat` ⇄ `Burg. v.d. Vlugtstr.`           |
+| en       | `OrdinalPermutation`             | `2nd Ave` ⇄ `Second Ave`                                             |
+| en       | `DirectionalPermutation`         | `W Sunset Blvd` ⇄ `West Sunset Blvd` ⇄ `Sunset Blvd`                 |
+| en       | `StreetSuffixPermutation`        | `Sunset Boulevard` ⇄ `Sunset Blvd` ⇄ `Sunset`                        |
+| fr       | `AccentPermutation`              | `Rue de l’Église` ⇄ `Rue de l'Eglise`                                |
+| fr       | `HyphenPermutation`              | `Avenue du Général de Gaulle` ⇄ `Avenue du Général-de-Gaulle`        |
+| fr       | `TitlePermutation`               | `Rue Saint-Étienne` ⇄ `Rue St-Étienne`                               |
+| fr       | `StreetTypePermutation`          | `Av. de la Gare` ⇄ `Avenue de la Gare`                               |
+| it       | `AccentPermutation`              | `VIA DELLA LIBERTA'` ⇄ `Via della Libertà`                           |
+| it       | `GivenNamePermutation`           | `Via Guglielmo Marconi` → `Via G. Marconi`, `Via Marconi`            |
+| it       | `TitlePermutation`               | `Piazza Sant'Agostino` ⇄ `Piazza S. Agostino`, `F.lli` ⇄ `Fratelli`  |
+| it       | `StreetTypePermutation`          | `P.zza Garibaldi` ⇄ `Piazza Garibaldi`                               |
+| pl       | `DiacriticPermutation`           | `Łódź` ⇄ `Lodz`, `Swietokrzyska` → `Świętokrzyska`                    |
+| pl       | `GivenNamePermutation`           | `ul. Tadeusza Kościuszki` → `ul. T. Kościuszki`, `ul. Kościuszki`    |
+| pl       | `TitlePermutation`               | `ul. Generała Andersa` ⇄ `ul. Gen. Andersa`                          |
+| pl       | `StreetTypePermutation`          | `ul. Długa` ⇄ `ulica Długa` ⇄ `Długa`                                |
+| da       | `LetterPermutation`              | `Nørregade` ⇄ `Noerregade` ⇄ `Norregade`, `Aabenraa` ⇄ `Åbenrå`       |
+| da       | `AccentPermutation`              | `Allé` ⇄ `Alle`                                                      |
+| da       | `PrefixPermutation`              | `Gammel Kongevej` ⇄ `Gl. Kongevej`                                   |
+| da       | `StreetTermPermutation`          | `Skovvej` ⇄ `Skovvejen`                                              |
+
+Add your own strategy by implementing `PermutationStrategyInterface` (language independent) or
+`LocalizedPermutationStrategyInterface`.
 
 Both `AddressNormalizer::createDefault()` and `AddressPermutator::createDefault()` work without the container.
 

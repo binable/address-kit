@@ -10,8 +10,12 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * "12a" ⇄ "12 a" ⇄ "12A" ⇄ "12 A".
+ *
+ * Language independent. Runs last, so the house number split off the street by
+ * {@see HouseNumberInStreetPermutation} is covered as well, and the street
+ * variants are not crowded out by the house number variants when the limit is reached.
  */
-#[AsTaggedItem(priority: 90)]
+#[AsTaggedItem(priority: 0)]
 final class HouseNumberPermutation implements PermutationStrategyInterface
 {
     public function permute(Address $address): iterable

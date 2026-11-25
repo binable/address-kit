@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Tests;
 
+use Binable\AddressKit\Language\StreetLanguageMap;
 use Binable\AddressKit\Model\Address;
+use Binable\AddressKit\Validator\Constraints\HouseNumberInRange;
+use Binable\AddressKit\Validator\Constraints\KnownStreet;
 use Binable\AddressKit\Normalizer\AddressNormalizer;
 use Binable\AddressKit\Normalizer\EncodingNormalizer;
 use Binable\AddressKit\Permutation\AddressPermutator;
@@ -50,6 +53,34 @@ final class AddressKitBundleTest extends TestCase
         $permutator = $container->get(AddressPermutator::class);
         self::assertInstanceOf(AddressPermutator::class, $permutator);
         self::assertCount(5, $permutator->permute(new Address('Müllerstraße', '1a', '1010', 'Wien', 'AT')));
+    }
+
+    public function testStreetLanguagesAndNewConstraints(): void
+    {
+        $kernel = new TestKernel(['street_languages' => ['BE' => ['nl']]]);
+        $kernel->boot();
+
+        try {
+            $container = $kernel->getContainer();
+
+            $map = $container->get(StreetLanguageMap::class);
+            self::assertInstanceOf(StreetLanguageMap::class, $map);
+            self::assertSame(['nl'], $map->getLanguages('BE'));
+            self::assertSame(['de'], $map->getLanguages('DE'));
+
+            $permutator = $container->get(AddressPermutator::class);
+            self::assertInstanceOf(AddressPermutator::class, $permutator);
+            $streets = array_map(static fn (Address $a): ?string => $a->street, $permutator->permute(new Address('Kerkstraat', null, null, null, 'BE')));
+            self::assertContains('Kerkstr.', $streets);
+
+            $validator = $container->get('test.validator');
+            self::assertInstanceOf(ValidatorInterface::class, $validator);
+            self::assertCount(1, $validator->validate('51', new HouseNumberInRange('1-50')));
+            // default_country DE → German permutations without an object
+            self::assertCount(0, $validator->validate('Hauptstr.', new KnownStreet(streets: ['Hauptstraße'])));
+        } finally {
+            $kernel->shutdown();
+        }
     }
 
     public function testValidatorUsesBundleConstraints(): void
