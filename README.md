@@ -108,6 +108,7 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 
 | Normalizer             | Example                                                         |
 |------------------------|-----------------------------------------------------------------|
+| `EncodingNormalizer`   | Encoding cleanup of all fields, see below (runs first)          |
 | `CountryNormalizer`    | `Deutschland`, `deu`, `de` → `DE`; empty → `default_country`     |
 | `StreetNormalizer`     | `Hauptstr. 12 A` → street `Hauptstraße`, house number `12 A`    |
 | `HouseNumberNormalizer`| `12 A` → `12a`, `12 - 14` → `12-14`                             |
@@ -118,6 +119,33 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 $normalized = $addressNormalizer->normalize(new Address('Hauptstr. 12 A', null, 'D-10115', 'BERLIN', 'Germany'));
 // Address('Hauptstraße', '12a', '10115', 'Berlin', 'DE')
 ```
+
+### Encoding
+
+`EncodingNormalizer` cleans the encoding of every address field. It runs all string normalizers tagged
+`address_kit.encoding_normalizer` (autoconfigured for `Encoding\StringNormalizerInterface`, ordered by
+priority). Each step gets the value and the `AddressField` it belongs to. Values that are empty after
+cleaning become `null`.
+
+| Priority | Step                           | Example                                                                                        |
+|----------|--------------------------------|------------------------------------------------------------------------------------------------|
+| 900      | `Utf8Normalizer`               | invalid UTF-8 (Windows-1252 / ISO-8859-1 input) → UTF-8                                         |
+| 800      | `MojibakeNormalizer`           | `Ã¼` → `ü`, `Ã©` → `é`, `â€™` → `’` (also double encoded and mixed strings)                     |
+| 700      | `UnicodeNfcNormalizer`         | `u` + U+0308 → `ü` (NFC)                                                                       |
+| 600      | `InvisibleCharacterNormalizer` | removes U+200B–U+200F (ZWSP, ZWNJ, ZWJ, direction marks), U+FEFF (BOM), U+00AD (soft hyphen), bidi controls |
+| 500      | `ControlCharacterNormalizer`   | line breaks, tabs and control characters → space (fields are single-line)                     |
+| 400      | `FullwidthNormalizer`          | `１２３` → `123`; full NFKC only for the ZIP code (configurable), otherwise digits only         |
+| 300      | `WhitespaceNormalizer`         | U+00A0, U+202F, U+2009, U+3000, tabs … → space; collapse and trim                              |
+| 200      | `DashNormalizer`               | `–` `—` `−` `‐` → `-`                                                                          |
+| 100      | `ApostropheNormalizer`         | `’` `‘` `´` `` ` `` → `'` (`O'Connell Street`, `Rue d'Alésia`)                                 |
+
+```php
+$encodingNormalizer->normalizeString("Oâ€™Connell\u{00A0}Street\u{200B}"); // "O'Connell Street"
+$encodingNormalizer->normalizeString('１００－０００１', AddressField::ZipCode); // "100-0001"
+```
+
+Add your own step by implementing `StringNormalizerInterface` and setting the position with
+`#[AsTaggedItem(priority: …)]`.
 
 ## Permutation
 

@@ -34,6 +34,7 @@ final readonly class AddressNormalizer
     public static function createDefault(string $defaultCountry = 'DE'): self
     {
         return new self([
+            EncodingNormalizer::createDefault(),
             new CountryNormalizer($defaultCountry),
             new StreetNormalizer(),
             new HouseNumberNormalizer(),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Binable\AddressKit\AddressKitBundle;
 use Binable\AddressKit\Normalizer\AddressNormalizer;
 use Binable\AddressKit\Normalizer\CountryNormalizer;
+use Binable\AddressKit\Normalizer\EncodingNormalizer;
 use Binable\AddressKit\Permutation\AddressPermutator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -24,6 +25,12 @@ return static function (ContainerConfigurator $container): void {
 
     $services->load('Binable\\AddressKit\\Normalizer\\', '../src/Normalizer/*Normalizer.php')
         ->exclude('../src/Normalizer/AddressNormalizer.php');
+
+    $services->load('Binable\\AddressKit\\Normalizer\\Encoding\\', '../src/Normalizer/Encoding/*Normalizer.php');
+
+    $services->set(EncodingNormalizer::class)
+        ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_ENCODING_NORMALIZER))
+        ->public();
 
     $services->set(CountryNormalizer::class)
         ->arg('$defaultCountry', param('address_kit.default_country'));

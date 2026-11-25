@@ -6,6 +6,7 @@ namespace Binable\AddressKit\Tests;
 
 use Binable\AddressKit\Model\Address;
 use Binable\AddressKit\Normalizer\AddressNormalizer;
+use Binable\AddressKit\Normalizer\EncodingNormalizer;
 use Binable\AddressKit\Permutation\AddressPermutator;
 use Binable\AddressKit\Tests\App\TestKernel;
 use PHPUnit\Framework\TestCase;
@@ -37,6 +38,14 @@ final class AddressKitBundleTest extends TestCase
 
         $normalized = $normalizer->normalize(new Address('Hauptstr. 1', null, '1010', 'WIEN'));
         self::assertTrue((new Address('Hauptstraße', '1', '1010', 'Wien', 'AT'))->equals($normalized));
+
+        // encoding steps are wired via tag and run before the other normalizers
+        $normalized = $normalizer->normalize(new Address("StraÃŸe\u{00A0}des 17. Juni", null, '１０１０', "Wien\u{200B}"));
+        self::assertTrue((new Address('Straße des 17. Juni', null, '1010', 'Wien', 'AT'))->equals($normalized), var_export($normalized, true));
+
+        $encoding = $container->get(EncodingNormalizer::class);
+        self::assertInstanceOf(EncodingNormalizer::class, $encoding);
+        self::assertSame("O'Connell", $encoding->normalizeString('Oâ€™Connell'));
 
         $permutator = $container->get(AddressPermutator::class);
         self::assertInstanceOf(AddressPermutator::class, $permutator);

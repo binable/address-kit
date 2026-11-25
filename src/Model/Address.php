@@ -53,6 +53,28 @@ final readonly class Address
         return new self($this->street, $this->houseNumber, $this->zipCode, $this->city, $country);
     }
 
+    public function get(AddressField $field): ?string
+    {
+        return match ($field) {
+            AddressField::Street => $this->street,
+            AddressField::HouseNumber => $this->houseNumber,
+            AddressField::ZipCode => $this->zipCode,
+            AddressField::City => $this->city,
+            AddressField::Country => $this->country,
+        };
+    }
+
+    public function with(AddressField $field, ?string $value): self
+    {
+        return match ($field) {
+            AddressField::Street => $this->withStreet($value),
+            AddressField::HouseNumber => $this->withHouseNumber($value),
+            AddressField::ZipCode => $this->withZipCode($value),
+            AddressField::City => $this->withCity($value),
+            AddressField::Country => $this->withCountry($value),
+        };
+    }
+
     public function equals(self $other): bool
     {
         return $this->street === $other->street
