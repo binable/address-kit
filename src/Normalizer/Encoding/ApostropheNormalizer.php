@@ -14,7 +14,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * apostrophe/prime (U+02BC/U+02B9), prime ′ (U+2032) and fullwidth apostrophe (U+FF07).
  */
 #[AsTaggedItem(priority: 100)]
-final class ApostropheNormalizer implements StringNormalizerInterface
+final class ApostropheNormalizer implements EncodingNormalizerInterface
 {
     private const PATTERN = '/[\x{0060}\x{00B4}\x{02B9}\x{02BC}\x{2018}-\x{201B}\x{2032}\x{FF07}]/u';
 

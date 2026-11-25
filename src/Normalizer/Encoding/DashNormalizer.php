@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * hyphen bullet (U+2043), minus sign (U+2212), small and fullwidth hyphen-minus (U+FE58, U+FE63, U+FF0D).
  */
 #[AsTaggedItem(priority: 200)]
-final class DashNormalizer implements StringNormalizerInterface
+final class DashNormalizer implements EncodingNormalizerInterface
 {
     private const PATTERN = '/[\x{2010}-\x{2015}\x{2043}\x{2212}\x{FE58}\x{FE63}\x{FF0D}]/u';
 

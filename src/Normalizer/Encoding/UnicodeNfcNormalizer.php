@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * Without it, comparisons and duplicate detection fail.
  */
 #[AsTaggedItem(priority: 700)]
-final class UnicodeNfcNormalizer implements StringNormalizerInterface
+final class UnicodeNfcNormalizer implements EncodingNormalizerInterface
 {
     public function normalize(string $value, ?AddressField $field = null): string
     {

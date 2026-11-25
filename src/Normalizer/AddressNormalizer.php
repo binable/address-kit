@@ -33,13 +33,15 @@ final readonly class AddressNormalizer
      */
     public static function createDefault(string $defaultCountry = 'DE'): self
     {
+        $whitespace = WhitespaceNormalizer::createDefault();
+
         return new self([
             EncodingNormalizer::createDefault(),
-            new CountryNormalizer($defaultCountry),
-            new StreetNormalizer(),
-            new HouseNumberNormalizer(),
-            new ZipCodeNormalizer(),
-            new CityNormalizer(),
+            new CountryNormalizer($defaultCountry, whitespace: $whitespace),
+            new StreetNormalizer($whitespace),
+            new HouseNumberNormalizer($whitespace),
+            new ZipCodeNormalizer($whitespace),
+            new CityNormalizer($whitespace),
         ]);
     }
 }

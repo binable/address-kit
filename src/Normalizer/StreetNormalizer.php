@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Normalizer;
 
 use Binable\AddressKit\Model\Address;
+use Binable\AddressKit\Model\AddressField;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -14,8 +15,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(priority: 80)]
 final class StreetNormalizer implements ComponentNormalizerInterface
 {
-    use WhitespaceTrait;
-
     /**
      * @var array<string, string> regex => replacement
      */
@@ -28,15 +27,22 @@ final class StreetNormalizer implements ComponentNormalizerInterface
 
     private const TRAILING_HOUSE_NUMBER = '/^(?<street>.*\p{L}.*?)\s+(?<number>\d{1,5}\s?[a-zA-Z]?(?:\s?[-\/]\s?\d{0,5}\s?[a-zA-Z]?)?)$/u';
 
+    private readonly WhitespaceNormalizer $whitespace;
+
+    public function __construct(?WhitespaceNormalizer $whitespace = null)
+    {
+        $this->whitespace = $whitespace ?? WhitespaceNormalizer::createDefault();
+    }
+
     public function normalize(Address $address): Address
     {
-        $street = $this->cleanWhitespace($address->street);
+        $street = $this->whitespace->normalize($address->street, AddressField::Street);
         if (null === $street) {
             return $address->withStreet(null);
         }
 
         $houseNumber = $address->houseNumber;
-        if (null === $this->cleanWhitespace($houseNumber) && 1 === preg_match(self::TRAILING_HOUSE_NUMBER, $street, $m)) {
+        if (null === $this->whitespace->normalize($houseNumber, AddressField::HouseNumber) && 1 === preg_match(self::TRAILING_HOUSE_NUMBER, $street, $m)) {
             $street = $m['street'];
             $houseNumber = $m['number'];
         }

@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * - in all other fields (and for values without a known field) only fullwidth digits U+FF10–U+FF19 are converted.
  */
 #[AsTaggedItem(priority: 400)]
-final readonly class FullwidthNormalizer implements StringNormalizerInterface
+final readonly class FullwidthNormalizer implements EncodingNormalizerInterface
 {
     /**
      * @param list<AddressField> $nfkcFields

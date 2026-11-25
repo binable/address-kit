@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Normalizer;
 
 use Binable\AddressKit\Model\Address;
+use Binable\AddressKit\Model\AddressField;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -13,11 +14,16 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(priority: 60)]
 final class ZipCodeNormalizer implements ComponentNormalizerInterface
 {
-    use WhitespaceTrait;
+    private readonly WhitespaceNormalizer $whitespace;
+
+    public function __construct(?WhitespaceNormalizer $whitespace = null)
+    {
+        $this->whitespace = $whitespace ?? WhitespaceNormalizer::createDefault();
+    }
 
     public function normalize(Address $address): Address
     {
-        $zip = $this->cleanWhitespace($address->zipCode);
+        $zip = $this->whitespace->normalize($address->zipCode, AddressField::ZipCode);
         if (null === $zip) {
             return $address->withZipCode(null);
         }

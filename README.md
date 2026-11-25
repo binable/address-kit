@@ -123,7 +123,7 @@ $normalized = $addressNormalizer->normalize(new Address('Hauptstr. 12 A', null, 
 ### Encoding
 
 `EncodingNormalizer` cleans the encoding of every address field. It runs all string normalizers tagged
-`address_kit.encoding_normalizer` (autoconfigured for `Encoding\StringNormalizerInterface`, ordered by
+`address_kit.encoding_normalizer` (autoconfigured for `Encoding\EncodingNormalizerInterface`, ordered by
 priority). Each step gets the value and the `AddressField` it belongs to. Values that are empty after
 cleaning become `null`.
 
@@ -135,7 +135,7 @@ cleaning become `null`.
 | 600      | `InvisibleCharacterNormalizer` | removes U+200B–U+200F (ZWSP, ZWNJ, ZWJ, direction marks), U+FEFF (BOM), U+00AD (soft hyphen), bidi controls |
 | 500      | `ControlCharacterNormalizer`   | line breaks, tabs and control characters → space (fields are single-line)                     |
 | 400      | `FullwidthNormalizer`          | `１２３` → `123`; full NFKC only for the ZIP code (configurable), otherwise digits only         |
-| 300      | `WhitespaceNormalizer`         | U+00A0, U+202F, U+2009, U+3000, tabs … → space; collapse and trim                              |
+| 300      | `SpaceNormalizer`              | U+00A0, U+202F, U+2009, U+3000, tabs … → space; collapse and trim                              |
 | 200      | `DashNormalizer`               | `–` `—` `−` `‐` → `-`                                                                          |
 | 100      | `ApostropheNormalizer`         | `’` `‘` `´` `` ` `` → `'` (`O'Connell Street`, `Rue d'Alésia`)                                 |
 
@@ -144,8 +144,30 @@ $encodingNormalizer->normalizeString("Oâ€™Connell\u{00A0}Street\u{200B}"); 
 $encodingNormalizer->normalizeString('１００－０００１', AddressField::ZipCode); // "100-0001"
 ```
 
-Add your own step by implementing `StringNormalizerInterface` and setting the position with
+Add your own step by implementing `Encoding\EncodingNormalizerInterface` and setting the position with
 `#[AsTaggedItem(priority: …)]`.
+
+### Whitespace and punctuation
+
+`WhitespaceNormalizer` cleans spaces and punctuation of a single value. It is used by the component
+normalizers (country, street, house number, ZIP code, city) for their field and runs all string normalizers
+tagged `address_kit.whitespace_normalizer` (autoconfigured for `Whitespace\WhitespaceNormalizerInterface`,
+ordered by priority). Values that are empty after cleaning become `null`.
+
+| Priority | Step                           | Example                                                                     |
+|----------|--------------------------------|-----------------------------------------------------------------------------|
+| 500      | `CollapseWhitespaceNormalizer` | `  Am   Markt ` → `Am Markt`                                                 |
+| 400      | `PunctuationSpacingNormalizer` | no space before `,` `.` `;` `)`, one after `,` `;`: `Gütersloh ,Kreis` → `Gütersloh, Kreis` |
+| 300      | `BracketSpacingNormalizer`     | `( 2. OG )` → `(2. OG)`                                                     |
+| 200      | `HyphenSpacingNormalizer`      | `Max - Planck - Str.` → `Max-Planck-Str.`, `12 - 14` → `12-14`              |
+| 100      | `EdgePunctuationNormalizer`    | `, Hauptstraße` → `Hauptstraße`, `Gütersloh,` → `Gütersloh`; keeps `Str.`, `a.M.` |
+
+```php
+$whitespaceNormalizer->normalize(' ,Max - Planck - Str . 1 ( 2. OG ) ,'); // "Max-Planck-Str. 1 (2. OG)"
+```
+
+Add your own step by implementing `Whitespace\WhitespaceNormalizerInterface`. Both step interfaces extend
+`Normalizer\StringNormalizerInterface`.
 
 ## Permutation
 

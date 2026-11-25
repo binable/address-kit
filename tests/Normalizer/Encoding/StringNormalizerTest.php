@@ -13,7 +13,7 @@ use Binable\AddressKit\Normalizer\Encoding\InvisibleCharacterNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\MojibakeNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\UnicodeNfcNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\Utf8Normalizer;
-use Binable\AddressKit\Normalizer\Encoding\WhitespaceNormalizer;
+use Binable\AddressKit\Normalizer\Encoding\SpaceNormalizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -77,11 +77,11 @@ final class StringNormalizerTest extends TestCase
         );
     }
 
-    public function testWhitespace(): void
+    public function testSpaces(): void
     {
         self::assertSame(
             'Frankfurt am Main 1',
-            (new WhitespaceNormalizer())->normalize("  Frankfurt\u{00A0}am\u{202F}\u{2009}Main\u{3000}\t 1 "),
+            (new SpaceNormalizer())->normalize("  Frankfurt\u{00A0}am\u{202F}\u{2009}Main\u{3000}\t 1 "),
         );
     }
 

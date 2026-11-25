@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Normalizer;
 
 use Binable\AddressKit\Model\Address;
+use Binable\AddressKit\Model\AddressField;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\Intl\Countries;
 use Symfony\Component\Intl\Exception\MissingResourceException;
@@ -18,12 +19,12 @@ use Symfony\Component\Intl\Exception\MissingResourceException;
 #[AsTaggedItem(priority: 100)]
 final class CountryNormalizer implements ComponentNormalizerInterface
 {
-    use WhitespaceTrait;
-
     /**
      * @var array<string, string>|null lower-cased country name => alpha-2
      */
     private ?array $nameMap = null;
+
+    private readonly WhitespaceNormalizer $whitespace;
 
     /**
      * @param list<string> $nameLocales locales used to resolve country names
@@ -31,12 +32,14 @@ final class CountryNormalizer implements ComponentNormalizerInterface
     public function __construct(
         private readonly ?string $defaultCountry = null,
         private readonly array $nameLocales = ['de', 'en'],
+        ?WhitespaceNormalizer $whitespace = null,
     ) {
+        $this->whitespace = $whitespace ?? WhitespaceNormalizer::createDefault();
     }
 
     public function normalize(Address $address): Address
     {
-        $country = $this->cleanWhitespace($address->country);
+        $country = $this->whitespace->normalize($address->country, AddressField::Country);
 
         if (null === $country) {
             return $address->withCountry($this->defaultCountry);

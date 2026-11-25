@@ -14,7 +14,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * Runs first, as all following steps require valid UTF-8.
  */
 #[AsTaggedItem(priority: 900)]
-final class Utf8Normalizer implements StringNormalizerInterface
+final class Utf8Normalizer implements EncodingNormalizerInterface
 {
     public function normalize(string $value, ?AddressField $field = null): string
     {

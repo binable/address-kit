@@ -9,13 +9,13 @@ use Binable\AddressKit\Model\AddressField;
 use Binable\AddressKit\Normalizer\Encoding\ApostropheNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\ControlCharacterNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\DashNormalizer;
+use Binable\AddressKit\Normalizer\Encoding\EncodingNormalizerInterface;
 use Binable\AddressKit\Normalizer\Encoding\FullwidthNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\InvisibleCharacterNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\MojibakeNormalizer;
-use Binable\AddressKit\Normalizer\Encoding\StringNormalizerInterface;
 use Binable\AddressKit\Normalizer\Encoding\UnicodeNfcNormalizer;
 use Binable\AddressKit\Normalizer\Encoding\Utf8Normalizer;
-use Binable\AddressKit\Normalizer\Encoding\WhitespaceNormalizer;
+use Binable\AddressKit\Normalizer\Encoding\SpaceNormalizer;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  *  600 {@see InvisibleCharacterNormalizer} remove zero-width space, BOM, soft hyphen, ZWJ, direction marks, …
  *  500 {@see ControlCharacterNormalizer}   line breaks, tabs, control characters → space
  *  400 {@see FullwidthNormalizer}          "１２３" → "123" (NFKC only for the ZIP code)
- *  300 {@see WhitespaceNormalizer}         no-break / narrow / ideographic space … → " ", collapse, trim
+ *  300 {@see SpaceNormalizer}              no-break / narrow / ideographic space … → " ", collapse, trim
  *  200 {@see DashNormalizer}               – — − ‐ → "-"
  *  100 {@see ApostropheNormalizer}         ’ ‘ ´ ` → "'"
  *
@@ -39,7 +39,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class EncodingNormalizer implements ComponentNormalizerInterface
 {
     /**
-     * @param iterable<StringNormalizerInterface> $normalizers
+     * @param iterable<EncodingNormalizerInterface> $normalizers
      */
     public function __construct(
         private iterable $normalizers,
@@ -83,7 +83,7 @@ final readonly class EncodingNormalizer implements ComponentNormalizerInterface
             new InvisibleCharacterNormalizer(),
             new ControlCharacterNormalizer(),
             new FullwidthNormalizer(),
-            new WhitespaceNormalizer(),
+            new SpaceNormalizer(),
             new DashNormalizer(),
             new ApostropheNormalizer(),
         ]);

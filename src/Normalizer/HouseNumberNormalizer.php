@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Normalizer;
 
 use Binable\AddressKit\Model\Address;
+use Binable\AddressKit\Model\AddressField;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -13,11 +14,16 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(priority: 70)]
 final class HouseNumberNormalizer implements ComponentNormalizerInterface
 {
-    use WhitespaceTrait;
+    private readonly WhitespaceNormalizer $whitespace;
+
+    public function __construct(?WhitespaceNormalizer $whitespace = null)
+    {
+        $this->whitespace = $whitespace ?? WhitespaceNormalizer::createDefault();
+    }
 
     public function normalize(Address $address): Address
     {
-        $number = $this->cleanWhitespace($address->houseNumber);
+        $number = $this->whitespace->normalize($address->houseNumber, AddressField::HouseNumber);
         if (null === $number) {
             return $address->withHouseNumber(null);
         }

@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * (Unicode category Zs). Repeated spaces are collapsed and the value is trimmed.
  */
 #[AsTaggedItem(priority: 300)]
-final class WhitespaceNormalizer implements StringNormalizerInterface
+final class SpaceNormalizer implements EncodingNormalizerInterface
 {
     public function normalize(string $value, ?AddressField $field = null): string
     {

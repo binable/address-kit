@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Binable\AddressKit;
 
 use Binable\AddressKit\Normalizer\ComponentNormalizerInterface;
-use Binable\AddressKit\Normalizer\Encoding\StringNormalizerInterface;
+use Binable\AddressKit\Normalizer\Encoding\EncodingNormalizerInterface;
+use Binable\AddressKit\Normalizer\Whitespace\WhitespaceNormalizerInterface;
 use Binable\AddressKit\Permutation\PermutationStrategyInterface;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -16,6 +17,7 @@ final class AddressKitBundle extends AbstractBundle
 {
     public const TAG_NORMALIZER = 'address_kit.normalizer';
     public const TAG_ENCODING_NORMALIZER = 'address_kit.encoding_normalizer';
+    public const TAG_WHITESPACE_NORMALIZER = 'address_kit.whitespace_normalizer';
     public const TAG_PERMUTATION_STRATEGY = 'address_kit.permutation_strategy';
 
     protected string $extensionAlias = 'address_kit';
@@ -51,8 +53,10 @@ final class AddressKitBundle extends AbstractBundle
 
         $builder->registerForAutoconfiguration(ComponentNormalizerInterface::class)
             ->addTag(self::TAG_NORMALIZER);
-        $builder->registerForAutoconfiguration(StringNormalizerInterface::class)
+        $builder->registerForAutoconfiguration(EncodingNormalizerInterface::class)
             ->addTag(self::TAG_ENCODING_NORMALIZER);
+        $builder->registerForAutoconfiguration(WhitespaceNormalizerInterface::class)
+            ->addTag(self::TAG_WHITESPACE_NORMALIZER);
         $builder->registerForAutoconfiguration(PermutationStrategyInterface::class)
             ->addTag(self::TAG_PERMUTATION_STRATEGY);
 

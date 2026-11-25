@@ -17,7 +17,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * in up to {@see MAX_ROUNDS} rounds.
  */
 #[AsTaggedItem(priority: 800)]
-final class MojibakeNormalizer implements StringNormalizerInterface
+final class MojibakeNormalizer implements EncodingNormalizerInterface
 {
     private const MAX_ROUNDS = 3;
 
