@@ -5,23 +5,18 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Validator\Constraints;
 
 use Symfony\Component\Validator\Attribute\HasNamedArguments;
-use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Validates a city / locality name, e.g. "München", "Frankfurt am Main", "Saint-Étienne", "Halle (Saale)".
+ * City / locality name, e.g. "München", "Frankfurt am Main", "Saint-Étienne", "Halle (Saale)".
+ *
+ * Composition (stops at the first failing rule):
+ * NotBlank (if required) → Type(string) → Length → Regex
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
-final class City extends Constraint
+final class City extends Assert\Compound
 {
-    public const INVALID_CHARACTERS_ERROR = '3f8e2a1b-7c4d-4e9f-8a6b-5c1d0e2f3a81';
-    public const TOO_SHORT_ERROR = '3f8e2a1b-7c4d-4e9f-8a6b-5c1d0e2f3a82';
-    public const TOO_LONG_ERROR = '3f8e2a1b-7c4d-4e9f-8a6b-5c1d0e2f3a83';
-
-    protected const ERROR_NAMES = [
-        self::INVALID_CHARACTERS_ERROR => 'INVALID_CHARACTERS_ERROR',
-        self::TOO_SHORT_ERROR => 'TOO_SHORT_ERROR',
-        self::TOO_LONG_ERROR => 'TOO_LONG_ERROR',
-    ];
+    use AddressComponentTrait;
 
     /**
      * Must start with a letter; allows letters, combining marks, whitespace and common punctuation.
@@ -33,20 +28,34 @@ final class City extends Constraint
      */
     public const DIGITS_PATTERN = '/^\p{L}[\p{L}\p{M}\d\s.,\'’´`\-\/()]*$/u';
 
+    public string $pattern;
+
+    /**
+     * @param int<0, max> $minLength
+     * @param int<1, max> $maxLength
+     */
     #[HasNamedArguments]
     public function __construct(
+        public bool $required = true,
         public int $minLength = 2,
         public int $maxLength = 100,
         public bool $allowDigits = false,
-        public ?string $pattern = null,
+        ?string $pattern = null,
         public string $message = 'This value is not a valid city name.',
-        public string $minLengthMessage = 'The city name is too short. It should have {{ limit }} characters or more.',
-        public string $maxLengthMessage = 'The city name is too long. It should have {{ limit }} characters or less.',
         ?array $groups = null,
         mixed $payload = null,
     ) {
-        $this->pattern ??= $allowDigits ? self::DIGITS_PATTERN : self::DEFAULT_PATTERN;
+        $this->pattern = $pattern ?? ($allowDigits ? self::DIGITS_PATTERN : self::DEFAULT_PATTERN);
 
         parent::__construct(null, $groups, $payload);
+    }
+
+    protected function getConstraints(array $options): array
+    {
+        return $this->sequence($this->required, [
+            new Assert\Type('string'),
+            new Assert\Length(min: $this->minLength, max: $this->maxLength, normalizer: 'trim'),
+            new Assert\Regex(pattern: $this->pattern, message: $this->message, normalizer: 'trim'),
+        ]);
     }
 }

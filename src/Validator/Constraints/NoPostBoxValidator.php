@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Validator\Constraints;
 
-use Symfony\Component\Intl\Countries;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
-final class CountryValidator extends ConstraintValidator
+final class NoPostBoxValidator extends ConstraintValidator
 {
     public function validate(mixed $value, Constraint $constraint): void
     {
-        if (!$constraint instanceof Country) {
-            throw new UnexpectedTypeException($constraint, Country::class);
+        if (!$constraint instanceof NoPostBox) {
+            throw new UnexpectedTypeException($constraint, NoPostBox::class);
         }
 
         if (null === $value || '' === $value) {
@@ -27,21 +26,20 @@ final class CountryValidator extends ConstraintValidator
         }
 
         $value = (string) $value;
-        $exists = $constraint->alpha3 ? Countries::alpha3CodeExists($value) : Countries::exists($value);
 
-        if (!$exists) {
-            $this->context->buildViolation($constraint->message)
+        if (1 === preg_match(NoPostBox::POST_BOX_PATTERN, $value)) {
+            $this->context->buildViolation($constraint->postBoxMessage)
                 ->setParameter('{{ value }}', $this->formatValue($value))
-                ->setCode(Country::NO_SUCH_COUNTRY_ERROR)
+                ->setCode(NoPostBox::POST_BOX_ERROR)
                 ->addViolation();
 
             return;
         }
 
-        if ([] !== $constraint->allowedCountries && !\in_array($value, $constraint->allowedCountries, true)) {
-            $this->context->buildViolation($constraint->notAllowedMessage)
+        if (!$constraint->allowParcelLockers && 1 === preg_match(NoPostBox::PARCEL_LOCKER_PATTERN, $value)) {
+            $this->context->buildViolation($constraint->parcelLockerMessage)
                 ->setParameter('{{ value }}', $this->formatValue($value))
-                ->setCode(Country::NOT_ALLOWED_ERROR)
+                ->setCode(NoPostBox::PARCEL_LOCKER_ERROR)
                 ->addViolation();
         }
     }

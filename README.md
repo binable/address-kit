@@ -31,37 +31,70 @@ address_kit:
 
 ## Validator
 
-One constraint per address component, in `Binable\AddressKit\Validator\Constraints`:
+All constraints live in `Binable\AddressKit\Validator\Constraints`.
 
-| Constraint    | Checks                                                                                  | Options                                                     |
-|---------------|-----------------------------------------------------------------------------------------|-------------------------------------------------------------|
-| `Street`      | Unicode letters, digits, common punctuation, at least one letter, length                | `minLength`, `maxLength`, `pattern`, messages               |
-| `HouseNumber` | `12`, `12a`, `12 A`, `12-14`, `12/1`, `7½`, length                                      | `pattern`, `maxLength`, messages                            |
-| `ZipCode`     | Country specific pattern (barbieswimcrew), generic check if the country is unknown      | `country` **or** `countryPath`, `strict`, `caseSensitive`   |
-| `City`        | Starts with a letter, letters and punctuation, optionally digits, length                | `minLength`, `maxLength`, `allowDigits`, `pattern`, messages |
-| `Country`     | ISO 3166-1 alpha-2 (or alpha-3) via `symfony/intl`, optional allow-list                 | `alpha3`, `allowedCountries`, messages                      |
+### Main constraints (compositions with strong defaults)
 
-As usual in Symfony, `null` and `''` are valid — combine with `NotBlank` where required.
+One `Compound` constraint per address component, built from Symfony's own constraints
+(`NotBlank`, `Type`, `Length`, `Regex`, `Country`, `Choice`). The rules run sequentially and stop at the
+first failure, so the user gets exactly one meaningful message per field. Violations carry the codes of
+the Symfony constraints (e.g. `Length::TOO_SHORT_ERROR`).
+
+| Constraint    | Composition                                                                                 | Required by default | Options                                                         |
+|---------------|---------------------------------------------------------------------------------------------|---------------------|-----------------------------------------------------------------|
+| `Street`      | NotBlank → Type(string) → Length(2–100) → Regex(allowed chars) → Regex(at least one letter) | yes                 | `minLength`, `maxLength`, `pattern`, messages                   |
+| `HouseNumber` | NotBlank → Type(string\|int) → Length(≤15) → Regex(`12`, `12a`, `12-14`, `12/1`, `7½`)      | **no**              | `maxLength`, `pattern`, `message`                               |
+| `ZipCode`     | NotBlank → Type(string\|int) → Length(2–10) → Regex(generic) → `ZipCodeForCountry`          | yes                 | `country`, `countryPath` (default `country`), `strict`, `caseSensitive`, lengths |
+| `City`        | NotBlank → Type(string) → Length(2–100) → Regex(starts with letter, no digits)              | yes                 | `minLength`, `maxLength`, `allowDigits`, `pattern`, `message`   |
+| `Country`     | NotBlank → Type(string) → Symfony `Country` (alpha-2/alpha-3) → Choice(allow-list)*         | yes                 | `alpha3`, `allowedCountries`, messages                          |
+
+\* only when the corresponding option is set.
+
+`ZipCode` reads the country for the country specific check from the property `country` of the validated
+object by default, so `#[ZipCode]` works without parameters on typical address classes. A fixed
+`country: 'DE'` takes precedence; `countryPath: 'address.country'` reads another path;
+`countryPath: null` disables the country check. If the path is not readable, or the value is validated
+without an object, only the generic check applies.
+
+Every main constraint has a `required` option. With `required: false`, blank values (`null`, `''`,
+whitespace) are skipped and the remaining rules only apply to filled-in values.
+
+### Special-case constraints
+
+Opt-in constraints for specific requirements, to combine with the main constraints:
+
+| Constraint                 | Purpose                                                                                     | Options                                     |
+|----------------------------|---------------------------------------------------------------------------------------------|---------------------------------------------|
+| `ZipCodeForCountry`        | Country specific ZIP format via barbieswimcrew/zip-code-validator (used by `ZipCode`)       | `country`, `countryPath` (default `country`), `strict`, `caseSensitive` |
+| `StreetWithoutHouseNumber` | Street must not contain a house number (`Hauptstraße 12`), for a separate house number field | `pattern`, `message`                        |
+| `NoPostBox`                | Rejects `Postfach`, `PO Box`, … and parcel lockers (`Packstation`, `Postfiliale`, …)         | `allowParcelLockers`, messages              |
+| `NoPlaceholderValue`       | Rejects dummy input (`test`, `asdf`, `n/a`, `-`, `xxx`, `0000`, …)                           | `placeholders`, `extraPlaceholders`, `rejectRepeatedCharacters` |
+
+`OptionalSequentially` is the building block behind `required: false`: like Symfony's `Sequentially`,
+but it skips blank values.
 
 ```php
 use Binable\AddressKit\Validator\Constraints as AddressAssert;
-use Symfony\Component\Validator\Constraints as Assert;
 
 final class CheckoutAddress
 {
-    #[Assert\NotBlank, AddressAssert\Street]
+    #[AddressAssert\Street]
+    #[AddressAssert\StreetWithoutHouseNumber]
+    #[AddressAssert\NoPostBox]
+    #[AddressAssert\NoPlaceholderValue]
     public ?string $street = null;
 
-    #[AddressAssert\HouseNumber]
+    #[AddressAssert\HouseNumber(required: true)]
     public ?string $houseNumber = null;
 
-    #[Assert\NotBlank, AddressAssert\ZipCode(countryPath: 'country')]
+    #[AddressAssert\ZipCode]
     public ?string $zip = null;
 
-    #[Assert\NotBlank, AddressAssert\City]
+    #[AddressAssert\City]
+    #[AddressAssert\NoPlaceholderValue]
     public ?string $city = null;
 
-    #[Assert\NotBlank, AddressAssert\Country(allowedCountries: ['DE', 'AT', 'CH'])]
+    #[AddressAssert\Country(allowedCountries: ['DE', 'AT', 'CH'])]
     public ?string $country = null;
 }
 ```

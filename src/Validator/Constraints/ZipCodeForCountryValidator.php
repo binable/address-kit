@@ -9,15 +9,14 @@ use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
-use Symfony\Component\Validator\Exception\ConstraintDefinitionException;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 use Symfony\Component\Validator\Exception\UnexpectedValueException;
-use ZipCodeValidator\Constraints\ZipCode as CountryZipCode;
+use ZipCodeValidator\Constraints\ZipCode as BarbieswimcrewZipCode;
 
 /**
- * Resolves the country and delegates the country-specific check to barbieswimcrew/zip-code-validator.
+ * Resolves the country and delegates the format check to barbieswimcrew/zip-code-validator.
  */
-final class ZipCodeValidator extends ConstraintValidator
+final class ZipCodeForCountryValidator extends ConstraintValidator
 {
     private readonly PropertyAccessorInterface $propertyAccessor;
 
@@ -28,8 +27,8 @@ final class ZipCodeValidator extends ConstraintValidator
 
     public function validate(mixed $value, Constraint $constraint): void
     {
-        if (!$constraint instanceof ZipCode) {
-            throw new UnexpectedTypeException($constraint, ZipCode::class);
+        if (!$constraint instanceof ZipCodeForCountry) {
+            throw new UnexpectedTypeException($constraint, ZipCodeForCountry::class);
         }
 
         if (null === $value || '' === $value) {
@@ -44,19 +43,11 @@ final class ZipCodeValidator extends ConstraintValidator
         $country = $this->resolveCountry($constraint);
 
         if (null === $country) {
-            if (1 !== preg_match(ZipCode::GENERIC_PATTERN, $value)) {
-                $this->context->buildViolation($constraint->message)
-                    ->setParameter('{{ value }}', $this->formatValue($value))
-                    ->setCode(ZipCode::INVALID_FORMAT_ERROR)
-                    ->addViolation();
-            }
-
             return;
         }
 
-        // Run the country specific check in a separate validation run, so the violation is
-        // reported with this constraint's message, parameters and error code.
-        $violations = $this->context->getValidator()->validate($value, new CountryZipCode(
+        // Separate validation run, so the violation is reported with this constraint's message, parameters and code.
+        $violations = $this->context->getValidator()->validate($value, new BarbieswimcrewZipCode(
             iso: $country,
             strict: $constraint->strict,
             caseSensitiveCheck: $constraint->caseSensitive,
@@ -66,30 +57,30 @@ final class ZipCodeValidator extends ConstraintValidator
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ value }}', $this->formatValue($value))
                 ->setParameter('{{ country }}', $country)
-                ->setCode(ZipCode::INVALID_FORMAT_ERROR)
+                ->setCode(ZipCodeForCountry::INVALID_FORMAT_ERROR)
                 ->addViolation();
         }
     }
 
-    private function resolveCountry(ZipCode $constraint): ?string
+    private function resolveCountry(ZipCodeForCountry $constraint): ?string
     {
         if (null !== $constraint->country) {
             return strtoupper($constraint->country);
         }
 
-        if (null === $constraint->countryPath) {
-            return null;
-        }
-
         $object = $this->context->getObject();
-        if (null === $object) {
+        if (null === $object || null === $constraint->countryPath) {
             return null;
         }
 
         try {
+            if (!$this->propertyAccessor->isReadable($object, $constraint->countryPath)) {
+                return null;
+            }
+
             $country = $this->propertyAccessor->getValue($object, $constraint->countryPath);
-        } catch (PropertyAccessException $e) {
-            throw new ConstraintDefinitionException(\sprintf('Cannot read country from path "%s": %s', $constraint->countryPath, $e->getMessage()), 0, $e);
+        } catch (PropertyAccessException) {
+            return null;
         }
 
         if (!\is_string($country) || '' === trim($country)) {

@@ -5,45 +5,72 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Validator\Constraints;
 
 use Symfony\Component\Validator\Attribute\HasNamedArguments;
-use Symfony\Component\Validator\Constraint;
-use Symfony\Component\Validator\Exception\ConstraintDefinitionException;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Validates a ZIP / postal code.
+ * ZIP / postal code.
  *
- * Country-specific patterns are provided by barbieswimcrew/zip-code-validator. The country is either
- * fixed via {@see $country} or read from the validated object via {@see $countryPath}
- * (symfony/property-access path, e.g. "country" or "address.country").
- * Without a resolvable country only a generic plausibility check is applied.
+ * Composition (stops at the first failing rule):
+ * NotBlank (if required) → Type(string|int) → Length → Regex(generic format)
+ * → {@see ZipCodeForCountry} (unless both "country" and "countryPath" are null)
+ *
+ * Country resolution for the country specific check:
+ * - "country" (fixed ISO code, e.g. "DE") takes precedence, "countryPath" is ignored then.
+ * - "countryPath" defaults to "country", i.e. the property "country" (or getCountry()) of the validated object.
+ *   So `#[ZipCode]` works out of the box on objects like {@see \Binable\AddressKit\Model\Address}.
+ *   Use another symfony/property-access path (e.g. "address.country") if needed.
+ * - If the path is not readable, the object has no country or the value is validated standalone
+ *   (no object), only the generic check applies.
+ * - Set "countryPath: null" to disable the country specific check entirely.
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
-final class ZipCode extends Constraint
+final class ZipCode extends Assert\Compound
 {
-    public const INVALID_FORMAT_ERROR = '8d4b6f1a-3e2c-4b7d-a9f8-2e1c0d3b4a51';
-
-    protected const ERROR_NAMES = [
-        self::INVALID_FORMAT_ERROR => 'INVALID_FORMAT_ERROR',
-    ];
+    use AddressComponentTrait;
 
     /**
-     * Generic fallback when no country is known: 2–10 alphanumerics, optionally separated by space or dash.
+     * Generic format: alphanumerics, optionally separated by space or dash, no leading/trailing separator.
      */
-    public const GENERIC_PATTERN = '/^[A-Za-z0-9](?:[A-Za-z0-9 \-]{0,8})[A-Za-z0-9]$/';
+    public const GENERIC_PATTERN = '/^[A-Za-z0-9](?:[A-Za-z0-9 \-]*[A-Za-z0-9])?$/';
 
+    /**
+     * @param int<0, max> $minLength
+     * @param int<1, max> $maxLength
+     */
     #[HasNamedArguments]
     public function __construct(
+        public bool $required = true,
         public ?string $country = null,
-        public ?string $countryPath = null,
+        public ?string $countryPath = 'country',
         public bool $strict = false,
         public bool $caseSensitive = false,
+        public int $minLength = 2,
+        public int $maxLength = 10,
         public string $message = 'This value is not a valid ZIP code.',
         ?array $groups = null,
         mixed $payload = null,
     ) {
-        if (null !== $country && null !== $countryPath) {
-            throw new ConstraintDefinitionException(\sprintf('The options "country" and "countryPath" of constraint "%s" are mutually exclusive.', self::class));
+        parent::__construct(null, $groups, $payload);
+    }
+
+    protected function getConstraints(array $options): array
+    {
+        $constraints = [
+            new Assert\Type(['string', 'int']),
+            new Assert\Length(min: $this->minLength, max: $this->maxLength, normalizer: 'trim'),
+            new Assert\Regex(pattern: self::GENERIC_PATTERN, message: $this->message, normalizer: 'trim'),
+        ];
+
+        if (null !== $this->country || null !== $this->countryPath) {
+            $constraints[] = new ZipCodeForCountry(
+                country: $this->country,
+                countryPath: null === $this->country ? $this->countryPath : null,
+                strict: $this->strict,
+                caseSensitive: $this->caseSensitive,
+                message: $this->message,
+            );
         }
 
-        parent::__construct(null, $groups, $payload);
+        return $this->sequence($this->required, $constraints);
     }
 }

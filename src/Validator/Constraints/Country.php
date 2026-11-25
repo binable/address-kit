@@ -5,28 +5,25 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Validator\Constraints;
 
 use Symfony\Component\Validator\Attribute\HasNamedArguments;
-use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Validates an ISO 3166-1 country code (alpha-2 by default, alpha-3 optional) using symfony/intl,
- * optionally restricted to a list of allowed countries.
+ * ISO 3166-1 country code (alpha-2 by default, alpha-3 optional), optionally restricted to an allow-list.
+ *
+ * Composition (stops at the first failing rule):
+ * NotBlank (if required) → Type(string) → Symfony Country (symfony/intl) → Choice(allowedCountries, if set)
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
-final class Country extends Constraint
+final class Country extends Assert\Compound
 {
-    public const NO_SUCH_COUNTRY_ERROR = '5a2c7e9f-1b3d-4f6a-9c8e-7d0b1a2c3e91';
-    public const NOT_ALLOWED_ERROR = '5a2c7e9f-1b3d-4f6a-9c8e-7d0b1a2c3e92';
-
-    protected const ERROR_NAMES = [
-        self::NO_SUCH_COUNTRY_ERROR => 'NO_SUCH_COUNTRY_ERROR',
-        self::NOT_ALLOWED_ERROR => 'NOT_ALLOWED_ERROR',
-    ];
+    use AddressComponentTrait;
 
     /**
      * @param list<string> $allowedCountries Upper-case codes in the same format as {@see $alpha3}. Empty = all countries.
      */
     #[HasNamedArguments]
     public function __construct(
+        public bool $required = true,
         public bool $alpha3 = false,
         public array $allowedCountries = [],
         public string $message = 'This value is not a valid country.',
@@ -35,5 +32,16 @@ final class Country extends Constraint
         mixed $payload = null,
     ) {
         parent::__construct(null, $groups, $payload);
+    }
+
+    protected function getConstraints(array $options): array
+    {
+        return $this->sequence($this->required, [
+            new Assert\Type('string'),
+            new Assert\Country(message: $this->message, alpha3: $this->alpha3),
+            ...([] !== $this->allowedCountries
+                ? [new Assert\Choice(choices: $this->allowedCountries, message: $this->notAllowedMessage)]
+                : []),
+        ]);
     }
 }

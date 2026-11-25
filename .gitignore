@@ -4,3 +4,4 @@
 /var/
 /phpunit.xml
 /phpstan.neon
+/.idea

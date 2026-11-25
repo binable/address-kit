@@ -5,28 +5,24 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Model;
 
 use Binable\AddressKit\Validator\Constraints as AddressAssert;
-use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Immutable postal address value object.
  *
  * The country is stored as ISO 3166-1 alpha-2 code (e.g. "DE").
+ * Street, ZIP code, city and country are required; the house number is optional.
  */
 final readonly class Address
 {
     public function __construct(
-        #[Assert\NotBlank]
         #[AddressAssert\Street]
         public ?string $street = null,
         #[AddressAssert\HouseNumber]
         public ?string $houseNumber = null,
-        #[Assert\NotBlank]
-        #[AddressAssert\ZipCode(countryPath: 'country')]
+        #[AddressAssert\ZipCode]
         public ?string $zipCode = null,
-        #[Assert\NotBlank]
         #[AddressAssert\City]
         public ?string $city = null,
-        #[Assert\NotBlank]
         #[AddressAssert\Country]
         public ?string $country = null,
     ) {
