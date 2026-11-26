@@ -314,6 +314,8 @@ address_kit:
 | da       | `AccentPermutation`              | `Allé` ⇄ `Alle`                                                      |
 | da       | `PrefixPermutation`              | `Gammel Kongevej` ⇄ `Gl. Kongevej`                                   |
 | da       | `StreetTermPermutation`          | `Skovvej` ⇄ `Skovvejen`                                              |
+| da       | `LinkingSPermutation`            | `Guldregnsvej` ⇄ `Guldregnvej`                                       |
+| da       | `BygadePermutation`              | `Lemming Bygade` ⇄ `Lemmingbygade`                                   |
 
 Add your own strategy by implementing `PermutationStrategyInterface` (language independent) or
 `LocalizedPermutationStrategyInterface`.

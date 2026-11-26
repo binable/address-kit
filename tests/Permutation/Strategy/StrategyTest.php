@@ -67,6 +67,12 @@ final class StrategyTest extends TestCase
         yield 'da accent' => [new Strategy\Da\AccentPermutation(), 'H.C. Andersens Alle', ['H.C. Andersens Allé']];
         yield 'da prefix' => [new Strategy\Da\PrefixPermutation(), 'Gammel Kongevej', ['Gl. Kongevej']];
         yield 'da term' => [new Strategy\Da\StreetTermPermutation(), 'Skovvej', ['Skovvejen']];
+        yield 'da linking s dropped' => [new Strategy\Da\LinkingSPermutation(), 'Guldregnsvej', ['Guldregnvej']];
+        yield 'da linking s added' => [new Strategy\Da\LinkingSPermutation(), 'Syrenvejen', ['Syrensvejen']];
+        yield 'da linking s upper case' => [new Strategy\Da\LinkingSPermutation(), 'SYRENVEJ', ['SYRENSVEJ']];
+        yield 'da bygade glued' => [new Strategy\Da\BygadePermutation(), 'Lemming Bygade', ['Lemmingbygade']];
+        yield 'da bygade split' => [new Strategy\Da\BygadePermutation(), 'Hjerkbygaden', ['Hjerk Bygaden']];
+        yield 'da bygade upper case' => [new Strategy\Da\BygadePermutation(), 'LEMMINGBYGADE', ['LEMMING BYGADE']];
     }
 
     /**
@@ -102,6 +108,25 @@ final class StrategyTest extends TestCase
         );
 
         self::assertSame(['Lodz'], $cities);
+    }
+
+    public function testDanishLinkingSIsGuarded(): void
+    {
+        $strategy = new Strategy\Da\LinkingSPermutation();
+
+        // behind a vowel: no "s" is added, and an existing one belongs to the name
+        foreach (['Kirkevej', 'Krusvej', 'Sankt Hans Vej', 'Vej', 'Ågade'] as $street) {
+            self::assertSame([], iterator_to_array($strategy->permute(new Address($street)), false), $street);
+        }
+    }
+
+    public function testDanishBygadeNeedsAVillage(): void
+    {
+        $strategy = new Strategy\Da\BygadePermutation();
+
+        foreach (['Bygade', 'Bygaden', 'Hovedgade', 'Lemming Hovedgade'] as $street) {
+            self::assertSame([], iterator_to_array($strategy->permute(new Address($street)), false), $street);
+        }
     }
 
     public function testNullStreetIsIgnored(): void
