@@ -142,7 +142,7 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 | `CountryNormalizer`    | `Deutschland`, `deu`, `D`, `de` → `DE`; empty → `default_country` (see below) |
 | `StreetNormalizer`     | `Hauptstr. 12 A` → street `Hauptstraße`, house number `12 A`; per country, see below |
 | `HouseNumberNormalizer`| `12 - 14` → `12-14`; DE, AT, CH, LI: `12 A` → `12a`, other countries keep `74G`, `18 A` |
-| `ZipCodeNormalizer`    | `d-10115` → `10115`, `sw1a 1aa` → `SW1A 1AA`                    |
+| `ZipCodeNormalizer`    | `d-10115` → `10115`, `sw1a 1aa` → `SW1A 1AA`; without country: `LV-1050` → `1050` + country `LV` (only if the rest fits the country's format) |
 | `CityNormalizer`       | `FRANKFURT AM MAIN` → `Frankfurt am Main`, `SAINT-GERMAIN-EN-LAYE` → `Saint-Germain-en-Laye`, `'S-HEERENBERG` → `'s-Heerenberg` |
 
 ```php

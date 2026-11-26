@@ -146,6 +146,35 @@ final class AddressNormalizerTest extends TestCase
 
         self::assertSame('10115', $normalizer->normalize(new Address(zipCode: 'DE-10115', country: 'DE'))->zipCode);
         self::assertSame('SW1A 1AA', $normalizer->normalize(new Address(zipCode: 'sw1a 1aa', country: 'GB'))->zipCode);
+        self::assertSame('1050', $normalizer->normalize(new Address(zipCode: 'LV-1050', country: 'LV'))->zipCode);
+        self::assertSame('1111', $normalizer->normalize(new Address(zipCode: 'L-1111', country: 'LU'))->zipCode);
+        // a differing prefix never overrides a given country
+        self::assertSame('D-12345', $normalizer->normalize(new Address(zipCode: 'D-12345', country: 'AT'))->zipCode);
+    }
+
+    #[DataProvider('zipCodeCountryProvider')]
+    public function testZipCodePrefixSetsMissingCountry(string $input, string $zipCode, ?string $country): void
+    {
+        $address = (new ZipCodeNormalizer())->normalize(new Address(zipCode: $input));
+
+        self::assertSame($zipCode, $address->zipCode);
+        self::assertSame($country, $address->country);
+    }
+
+    /**
+     * @return iterable<string, array{string, string, ?string}>
+     */
+    public static function zipCodeCountryProvider(): iterable
+    {
+        yield 'iso alpha-2' => ['LV-1050', '1050', 'LV'];
+        yield 'vehicle code' => ['L-1111', '1111', 'LU'];
+        yield 'vehicle code lower case' => ['d-10115', '10115', 'DE'];
+        yield 'spaces around hyphen' => ['A - 1010', '1010', 'AT'];
+        yield 'iso wins over vehicle code' => ['ES-28001', '28001', 'ES'];
+        yield 'rest does not fit the country' => ['D-1234', 'D-1234', null];
+        yield 'unknown prefix' => ['XX-1234', 'XX-1234', null];
+        yield 'no hyphen' => ['SW1A 1AA', 'SW1A 1AA', null];
+        yield 'plain zip code' => ['10115', '10115', null];
     }
 
     #[DataProvider('cityProvider')]
