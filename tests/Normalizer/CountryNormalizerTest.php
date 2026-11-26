@@ -152,6 +152,12 @@ final class CountryNormalizerTest extends TestCase
         yield [null, 'DE'];
     }
 
+    public function testWithoutDefaultCountry(): void
+    {
+        self::assertNull((new CountryNormalizer(null))->normalize(new Address(city: 'Wien'))->country);
+        self::assertSame('AT', (new CountryNormalizer(null))->normalize(new Address(country: 'Österreich'))->country);
+    }
+
     public function testCustomSteps(): void
     {
         $normalizer = new CountryNormalizer(normalizers: [new Alpha3Normalizer()]);

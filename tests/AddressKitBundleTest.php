@@ -92,6 +92,20 @@ final class AddressKitBundleTest extends TestCase
         }
     }
 
+    public function testWithoutDefaultCountry(): void
+    {
+        $kernel = new TestKernel(['default_country' => null]);
+        $kernel->boot();
+
+        try {
+            $normalizer = $kernel->getContainer()->get(AddressNormalizer::class);
+            self::assertInstanceOf(AddressNormalizer::class, $normalizer);
+            self::assertNull($normalizer->normalize(new Address(city: 'Wien'))->country);
+        } finally {
+            $kernel->shutdown();
+        }
+    }
+
     public function testValidatorUsesBundleConstraints(): void
     {
         $validator = $this->kernel->getContainer()->get('test.validator');

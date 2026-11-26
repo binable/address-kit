@@ -19,9 +19,9 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * "address_kit.whitespace_normalizer" in priority order. Built-in steps:
  *
  *  500 {@see CollapseWhitespaceNormalizer} trim, collapse repeated whitespace
- *  400 {@see PunctuationSpacingNormalizer} no space before , . ; ) — one space after , ;
+ *  400 {@see PunctuationSpacingNormalizer} no space before , . ; ) — one space after , ; (not in the city)
  *  300 {@see BracketSpacingNormalizer}     "( 2. OG )" → "(2. OG)"
- *  200 {@see HyphenSpacingNormalizer}      "Max - Planck - Str." → "Max-Planck-Str.", "12 - 14" → "12-14"
+ *  200 {@see HyphenSpacingNormalizer}      "Max -Planck" → "Max-Planck", "12 - 14" → "12-14", keeps "Kamenz - Kamjenc"
  *  100 {@see EdgePunctuationNormalizer}    punctuation at start / end, keeps abbreviation dots ("Str.")
  *
  * Runs right after the {@see EncodingNormalizer} and before the component normalizers (country, street,

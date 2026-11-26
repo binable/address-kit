@@ -29,11 +29,11 @@ final class AddressKitBundle extends AbstractBundle
         $definition->rootNode()
             ->children()
                 ->scalarNode('default_country')
-                    ->info('ISO 3166-1 alpha-2 code used when an address has no country.')
+                    ->info('ISO 3166-1 alpha-2 code used when an address has no country, null to keep such addresses without country.')
                     ->defaultValue('DE')
                     ->validate()
-                        ->ifTrue(static fn (mixed $v): bool => !\is_string($v) || 1 !== preg_match('/^[A-Z]{2}$/', $v))
-                        ->thenInvalid('"default_country" must be an uppercase ISO 3166-1 alpha-2 code, %s given.')
+                        ->ifTrue(static fn (mixed $v): bool => null !== $v && (!\is_string($v) || 1 !== preg_match('/^[A-Z]{2}$/', $v)))
+                        ->thenInvalid('"default_country" must be null or an uppercase ISO 3166-1 alpha-2 code, %s given.')
                     ->end()
                 ->end()
                 ->integerNode('max_permutations')
@@ -63,7 +63,7 @@ final class AddressKitBundle extends AbstractBundle
     }
 
     /**
-     * @param array{default_country: string, max_permutations: int, street_languages: array<string, list<string>>} $config
+     * @param array{default_country: string|null, max_permutations: int, street_languages: array<string, list<string>>} $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {

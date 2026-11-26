@@ -30,8 +30,10 @@ final readonly class AddressNormalizer
 
     /**
      * Instance with all built-in normalizers, for usage without the Symfony container.
+     *
+     * @param string|null $defaultCountry country of addresses without one, null to keep them without country
      */
-    public static function createDefault(string $defaultCountry = 'DE'): self
+    public static function createDefault(?string $defaultCountry = 'DE'): self
     {
         return new self([
             EncodingNormalizer::createDefault(),

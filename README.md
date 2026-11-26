@@ -25,7 +25,7 @@ return [
 ```yaml
 # config/packages/address_kit.yaml
 address_kit:
-    default_country: DE     # used by the CountryNormalizer when an address has no country
+    default_country: DE     # used by the CountryNormalizer when an address has no country, ~ (null) to keep it empty
     max_permutations: 50    # upper bound of variants returned by the AddressPermutator
     street_languages:       # override the street name languages of a country (see Permutation → Languages)
         BE: [fr, nl, de]
@@ -140,15 +140,38 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 | `EncodingNormalizer`   | Encoding cleanup of all fields, see below (runs first)          |
 | `WhitespaceNormalizer` | Whitespace and punctuation cleanup of all fields, see below (runs second) |
 | `CountryNormalizer`    | `Deutschland`, `deu`, `D`, `de` → `DE`; empty → `default_country` (see below) |
-| `StreetNormalizer`     | `Hauptstr. 12 A` → street `Hauptstraße`, house number `12 A`    |
-| `HouseNumberNormalizer`| `12 A` → `12a`, `12 - 14` → `12-14`                             |
+| `StreetNormalizer`     | `Hauptstr. 12 A` → street `Hauptstraße`, house number `12 A`; per country, see below |
+| `HouseNumberNormalizer`| `12 - 14` → `12-14`; DE, AT, CH, LI: `12 A` → `12a`, other countries keep `74G`, `18 A` |
 | `ZipCodeNormalizer`    | `d-10115` → `10115`, `sw1a 1aa` → `SW1A 1AA`                    |
-| `CityNormalizer`       | `FRANKFURT AM MAIN` → `Frankfurt am Main`                       |
+| `CityNormalizer`       | `FRANKFURT AM MAIN` → `Frankfurt am Main`, `SAINT-GERMAIN-EN-LAYE` → `Saint-Germain-en-Laye`, `'S-HEERENBERG` → `'s-Heerenberg` |
 
 ```php
 $normalized = $addressNormalizer->normalize(new Address('Hauptstr. 12 A', null, 'D-10115', 'BERLIN', 'Germany'));
 // Address('Hauptstraße', '12a', '10115', 'Berlin', 'DE')
 ```
+
+Without a default country (`default_country: ~` or `AddressNormalizer::createDefault(null)`) addresses
+without country stay without one; the country specific street and house number rules are skipped for them.
+
+### Street and house number
+
+`StreetNormalizer` removes trailing ` ,;` and works per country (lists configurable via constructor):
+
+| Country     | Rule                                                                                  |
+|-------------|---------------------------------------------------------------------------------------|
+| DE, AT      | `Hauptstr.` → `Hauptstraße`, `Str. des 17. Juni` → `Straße des 17. Juni`, `Bahnhof Pl.` → `Bahnhof Platz` |
+| CH, LI      | `Bahnhofstr.` → `Bahnhofstrasse` (no ß), `Bahnhof Pl.` → `Bahnhof Platz`              |
+| IT, SM      | `Str. della Croce` → `Strada della Croce`                                             |
+| others      | abbreviations are kept (`Pl.` is *Place* in FR / BE / LU, *plac* in PL)               |
+
+A trailing house number is split off only when the house number is `null` and the country writes it behind
+the street (`StreetNormalizer::HOUSE_NUMBER_AFTER_STREET`, e.g. DE, AT, CH, NL, IT, PL). In US, GB, FR …
+street names may end with a number (`State Highway 42`, `Avenue du 8 Mai 1945`).
+
+`HouseNumberNormalizer` removes spaces around `-` and `/` everywhere. Only in DE, AT, CH and LI
+(`HouseNumberNormalizer::LOWER_CASE_SUFFIX_COUNTRIES`) the letter is attached and lower-cased (`12 A` → `12a`);
+other countries keep their spelling (`74G`, `30/A`, `Storgatan 18 A`). House numbers not starting with a digit
+(house names like `Ivy Cottage`, grid addresses like `N8342`) are never re-cased.
 
 ### Country
 
@@ -209,13 +232,13 @@ so these already get cleaned values. It runs all string normalizers tagged `addr
 | Priority | Step                           | Example                                                                     |
 |----------|--------------------------------|-----------------------------------------------------------------------------|
 | 500      | `CollapseWhitespaceNormalizer` | `  Am   Markt ` → `Am Markt`                                                 |
-| 400      | `PunctuationSpacingNormalizer` | no space before `,` `.` `;` `)`, one after `,` `;`: `Gütersloh ,Kreis` → `Gütersloh, Kreis` |
+| 400      | `PunctuationSpacingNormalizer` | no space before `,` `.` `;` `)`, one after `,` `;`: `Gütersloh ,Kreis` → `Gütersloh, Kreis` (not in the city: `Graz,03.Bez.:Geidorf`) |
 | 300      | `BracketSpacingNormalizer`     | `( 2. OG )` → `(2. OG)`                                                     |
-| 200      | `HyphenSpacingNormalizer`      | `Max - Planck - Str.` → `Max-Planck-Str.`, `12 - 14` → `12-14`              |
+| 200      | `HyphenSpacingNormalizer`      | `Max -Planck` → `Max-Planck`, `12 - 14` → `12-14`; keeps ` - ` between names (`Kamenz - Kamjenc`) |
 | 100      | `EdgePunctuationNormalizer`    | `, Hauptstraße` → `Hauptstraße`, `Gütersloh,` → `Gütersloh`; keeps `Str.`, `a.M.` |
 
 ```php
-$whitespaceNormalizer->normalizeString(' ,Max - Planck - Str . 1 ( 2. OG ) ,'); // "Max-Planck-Str. 1 (2. OG)"
+$whitespaceNormalizer->normalizeString(' ,Max -Planck -Str . 1 ( 2. OG ) ,'); // "Max-Planck-Str. 1 (2. OG)"
 ```
 
 Add your own step by implementing `Whitespace\WhitespaceNormalizerInterface`. Both step interfaces extend

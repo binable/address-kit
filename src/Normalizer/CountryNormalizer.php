@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 /**
  * Converts the country to an upper-case ISO 3166-1 alpha-2 code.
  *
- The country steps tagged "address_kit.country_normalizer" run in priority order, the first match wins.
+ * The country steps tagged "address_kit.country_normalizer" run in priority order, the first match wins.
  * Built-in steps:
  *
  *  300 {@see Alpha3Normalizer}                  "DEU" → "DE"
@@ -23,7 +23,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  *  100 {@see CountryNameNormalizer}             "Deutschland", "Germany" → "DE"
  * -100 {@see Alpha2Normalizer}                  "de" → "DE"
  *
- * Unknown values are kept, an empty country becomes the default country.
+ * Unknown values are kept, an empty country becomes the default country (stays null without default country).
  * Runs first, as other normalizers may depend on the country.
  */
 #[AsTaggedItem(priority: 100)]
@@ -35,7 +35,8 @@ final readonly class CountryNormalizer implements ComponentNormalizerInterface
     private iterable $normalizers;
 
     /**
-     * @param iterable<CountryCodeNormalizerInterface>|null $normalizers null for the built-in steps
+     * @param string|null                                  $defaultCountry country of addresses without one, null to keep them empty
+     * @param iterable<CountryCodeNormalizerInterface>|null $normalizers    null for the built-in steps
      */
     public function __construct(
         private ?string $defaultCountry = null,

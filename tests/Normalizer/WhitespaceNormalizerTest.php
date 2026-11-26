@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Binable\AddressKit\Tests\Normalizer;
 
 use Binable\AddressKit\Model\Address;
+use Binable\AddressKit\Model\AddressField;
 use Binable\AddressKit\Normalizer\AddressNormalizer;
 use Binable\AddressKit\Normalizer\Whitespace\BracketSpacingNormalizer;
 use Binable\AddressKit\Normalizer\Whitespace\CollapseWhitespaceNormalizer;
@@ -41,6 +42,15 @@ final class WhitespaceNormalizerTest extends TestCase
         yield ['1,a', '1, a'];
     }
 
+    public function testPunctuationSpacingInCity(): void
+    {
+        $normalizer = new PunctuationSpacingNormalizer();
+
+        self::assertSame('Graz,03.Bez.:Geidorf', $normalizer->normalize('Graz,03.Bez.:Geidorf', AddressField::City));
+        self::assertSame('Graz,Geidorf', $normalizer->normalize('Graz ,Geidorf', AddressField::City));
+        self::assertSame('Graz, 03.Bez.:Geidorf', $normalizer->normalize('Graz,03.Bez.:Geidorf', AddressField::Street));
+    }
+
     public function testBracketSpacing(): void
     {
         self::assertSame('Hauptstr. 1 (2. OG) [links]', (new BracketSpacingNormalizer())->normalize('Hauptstr. 1 ( 2. OG ) [ links ]'));
@@ -57,10 +67,16 @@ final class WhitespaceNormalizerTest extends TestCase
      */
     public static function hyphenProvider(): iterable
     {
-        yield ['Max - Planck - Str.', 'Max-Planck-Str.'];
         yield ['12 - 14', '12-14'];
+        yield ['12 -14', '12-14'];
+        yield ['D - 10115', 'D-10115'];
         yield ['Max -Planck', 'Max-Planck'];
         yield ['Ein- und Ausgang', 'Ein- und Ausgang'];
+        // separates two names
+        yield ['Max - Planck - Str.', 'Max - Planck - Str.'];
+        yield ['Kamenz - Kamjenc', 'Kamenz - Kamjenc'];
+        yield ['Brnik - Aerodrom', 'Brnik - Aerodrom'];
+        yield ['Località Poggio - Biana', 'Località Poggio - Biana'];
     }
 
     #[DataProvider('edgeProvider')]
@@ -94,7 +110,8 @@ final class WhitespaceNormalizerTest extends TestCase
     {
         $normalizer = WhitespaceNormalizer::createDefault();
 
-        self::assertSame('Max-Planck-Str. 1 (2. OG)', $normalizer->normalizeString(' ,Max - Planck - Str . 1 ( 2. OG ) ,'));
+        self::assertSame('Max-Planck-Str. 1 (2. OG)', $normalizer->normalizeString(' ,Max -Planck -Str . 1 ( 2. OG ) ,'));
+        self::assertSame('Gersdorf an der Feistritz', $normalizer->normalizeString('Gersdorf  an der   Feistritz', AddressField::City));
         self::assertSame('', $normalizer->normalizeString(' , . '));
     }
 
@@ -110,7 +127,7 @@ final class WhitespaceNormalizerTest extends TestCase
     public function testRunsBeforeComponentNormalizers(): void
     {
         $normalized = AddressNormalizer::createDefault()->normalize(
-            new Address(' Max - Planck - Str. ', '12 - 14 ,', ' 33330 ', 'Gütersloh,', ' DE ,'),
+            new Address(' Max -Planck -Str. ', '12 - 14 ,', ' 33330 ', 'Gütersloh,', ' DE ,'),
         );
 
         self::assertTrue(
