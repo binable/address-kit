@@ -8,6 +8,7 @@ use Binable\AddressKit\Normalizer\ComponentNormalizerInterface;
 use Binable\AddressKit\Normalizer\Country\CountryCodeNormalizerInterface;
 use Binable\AddressKit\Normalizer\Encoding\EncodingNormalizerInterface;
 use Binable\AddressKit\Normalizer\Whitespace\WhitespaceNormalizerInterface;
+use Binable\AddressKit\Normalizer\ZipCode\CountryZipCodeNormalizerInterface;
 use Binable\AddressKit\Permutation\PermutationStrategyInterface;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -20,6 +21,7 @@ final class AddressKitBundle extends AbstractBundle
     public const TAG_ENCODING_NORMALIZER = 'address_kit.encoding_normalizer';
     public const TAG_WHITESPACE_NORMALIZER = 'address_kit.whitespace_normalizer';
     public const TAG_COUNTRY_NORMALIZER = 'address_kit.country_normalizer';
+    public const TAG_ZIP_CODE_NORMALIZER = 'address_kit.zip_code_normalizer';
     public const TAG_PERMUTATION_STRATEGY = 'address_kit.permutation_strategy';
 
     protected string $extensionAlias = 'address_kit';
@@ -80,6 +82,8 @@ final class AddressKitBundle extends AbstractBundle
             ->addTag(self::TAG_WHITESPACE_NORMALIZER);
         $builder->registerForAutoconfiguration(CountryCodeNormalizerInterface::class)
             ->addTag(self::TAG_COUNTRY_NORMALIZER);
+        $builder->registerForAutoconfiguration(CountryZipCodeNormalizerInterface::class)
+            ->addTag(self::TAG_ZIP_CODE_NORMALIZER);
         $builder->registerForAutoconfiguration(PermutationStrategyInterface::class)
             ->addTag(self::TAG_PERMUTATION_STRATEGY);
 

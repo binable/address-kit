@@ -148,7 +148,7 @@ The bundled `Binable\AddressKit\Model\Address` value object is already annotated
 | `CountryNormalizer`    | `Deutschland`, `deu`, `D`, `de` → `DE`; empty → `default_country` (see below) |
 | `StreetNormalizer`     | `Hauptstr. 12 A` → street `Hauptstraße`, house number `12 A`; per country, see below |
 | `HouseNumberNormalizer`| `12 - 14` → `12-14`; DE, AT, CH, LI: `12 A` → `12a`, other countries keep `74G`, `18 A` |
-| `ZipCodeNormalizer`    | `d-10115` → `10115`, `sw1a 1aa` → `SW1A 1AA`; without country: `LV-1050` → `1050` + country `LV` (only if the rest fits the country's format) |
+| `ZipCodeNormalizer`    | `d-10115` → `10115`, `sw1a 1aa` → `SW1A 1AA`; without country: `LV-1050` → `1050` + country `LV` (only if the rest fits the country's format); per country, see below |
 | `CityNormalizer`       | `FRANKFURT AM MAIN` → `Frankfurt am Main`, `SAINT-GERMAIN-EN-LAYE` → `Saint-Germain-en-Laye`, `'S-HEERENBERG` → `'s-Heerenberg` |
 
 ```php
@@ -200,6 +200,22 @@ e.g. `(new VehicleRegistrationCodeNormalizer())->toAlpha2('FL')`.
 $countryNormalizer->toAlpha2('FL');          // "LI"
 $countryNormalizer->toAlpha2('Niederlande'); // "NL"
 ```
+
+### ZIP code
+
+`ZipCodeNormalizer` upper-cases the ZIP code and strips a `D-` / `DE-` style prefix of the address's country.
+Then it runs the steps tagged `address_kit.zip_code_normalizer` (autoconfigured for
+`ZipCode\CountryZipCodeNormalizerInterface`, ordered by priority); each step gets the result of the previous
+one and the country. Values that do not fit the country's format are kept as they are.
+
+| Priority | Step                               | Example                                                                                   |
+|----------|------------------------------------|-------------------------------------------------------------------------------------------|
+| 300      | `CedexZipCodeNormalizer`           | FR, MC and French overseas territories: `75008 CEDEX 08` → `75008`, `75 008` → `75008`     |
+| 200      | `PrefixedNumericZipCodeNormalizer` | LU, LV, LT, MC, SM: prefix, spaces and hyphens removed: `L 1111`, `LV1050`, `LT-01 100`, `RSM 47890` |
+| 100      | `LeadingZeroZipCodeNormalizer`     | AU, ZA: lost leading zero restored: `800` → `0800`                                         |
+
+Only addresses with a country get the country specific steps; without a country a three digit ZIP code
+could just as well be complete (e.g. a typo of a Swiss one).
 
 ### Encoding
 

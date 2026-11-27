@@ -152,6 +152,60 @@ final class AddressNormalizerTest extends TestCase
         self::assertSame('D-12345', $normalizer->normalize(new Address(zipCode: 'D-12345', country: 'AT'))->zipCode);
     }
 
+    #[DataProvider('zipCodePerCountryProvider')]
+    public function testZipCodePerCountry(string $input, string $country, string $expected): void
+    {
+        self::assertSame($expected, (new ZipCodeNormalizer())->normalize(new Address(zipCode: $input, country: $country))->zipCode);
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function zipCodePerCountryProvider(): iterable
+    {
+        // prefixed numeric
+        yield 'LU vehicle prefix with space' => ['L 1111', 'LU', '1111'];
+        yield 'LU iso prefix without separator' => ['lu1111', 'LU', '1111'];
+        yield 'LV without separator' => ['LV1050', 'LV', '1050'];
+        yield 'LV with space' => ['LV 1050', 'LV', '1050'];
+        yield 'LV with hyphen' => ['LV-1050', 'LV', '1050'];
+        yield 'LT spaced digits' => ['LT-01 100', 'LT', '01100'];
+        yield 'LT hyphen inside' => ['01-100', 'LT', '01100'];
+        yield 'MC with prefix' => ['MC 98000', 'MC', '98000'];
+        yield 'MC spaced' => ['98 000', 'MC', '98000'];
+        yield 'SM vehicle prefix' => ['RSM-47890', 'SM', '47890'];
+        yield 'SM iso prefix' => ['SM 47890', 'SM', '47890'];
+        yield 'LV wrong length kept' => ['LV 105', 'LV', 'LV 105'];
+        yield 'MC wrong range kept' => ['MC 12345', 'MC', 'MC 12345'];
+        // leading zero
+        yield 'AU lost leading zero' => ['800', 'AU', '0800'];
+        yield 'ZA lost leading zero' => ['2', 'ZA', '2'];
+        yield 'ZA three digits' => ['181', 'ZA', '0181'];
+        yield 'AU complete' => ['2000', 'AU', '2000'];
+        yield 'leading zero only for AU/ZA' => ['800', 'CH', '800'];
+        // CEDEX
+        yield 'FR cedex with number' => ['75008 cedex 08', 'FR', '75008'];
+        yield 'FR cedex without number' => ['92100 CEDEX', 'FR', '92100'];
+        yield 'FR cedex glued' => ['69002CEDEX 2', 'FR', '69002'];
+        yield 'FR spaced' => ['75 008', 'FR', '75008'];
+        yield 'FR corsica' => ['2a004 cedex', 'FR', '2A004'];
+        yield 'MC cedex' => ['98000 CEDEX', 'MC', '98000'];
+        yield 'RE cedex' => ['97400 CEDEX 9', 'RE', '97400'];
+        yield 'FR prefix and cedex' => ['F-75008 CEDEX 08', 'FR', '75008'];
+        yield 'FR other value kept' => ['CEDEX', 'FR', 'CEDEX'];
+        // other countries keep spaces and hyphens
+        yield 'PL keeps hyphen' => ['00-950', 'PL', '00-950'];
+        yield 'PT keeps hyphen' => ['1000-001', 'PT', '1000-001'];
+        yield 'NL keeps space' => ['1234 ab', 'NL', '1234 AB'];
+    }
+
+    public function testZipCodeCountryStepsAreReplaceable(): void
+    {
+        $normalizer = new ZipCodeNormalizer([]);
+
+        self::assertSame('LV 1050', $normalizer->normalize(new Address(zipCode: 'lv 1050', country: 'LV'))->zipCode);
+    }
+
     #[DataProvider('zipCodeCountryProvider')]
     public function testZipCodePrefixSetsMissingCountry(string $input, string $zipCode, ?string $country): void
     {
@@ -175,6 +229,8 @@ final class AddressNormalizerTest extends TestCase
         yield 'unknown prefix' => ['XX-1234', 'XX-1234', null];
         yield 'no hyphen' => ['SW1A 1AA', 'SW1A 1AA', null];
         yield 'plain zip code' => ['10115', '10115', null];
+        yield 'country steps apply after inference' => ['LT-01 100', '01100', 'LT'];
+        yield 'vehicle code san marino' => ['RSM-47890', '47890', 'SM'];
     }
 
     #[DataProvider('cityProvider')]

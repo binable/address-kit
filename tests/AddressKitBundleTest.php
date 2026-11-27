@@ -59,6 +59,11 @@ final class AddressKitBundleTest extends TestCase
         self::assertSame('NL', $country->toAlpha2('Niederlande'));
         self::assertSame('DE', $normalizer->normalize(new Address(city: 'Berlin', country: 'D'))->country);
 
+        // ZIP code steps are wired via tag
+        self::assertSame('1050', $normalizer->normalize(new Address(zipCode: 'LV 1050', country: 'LV'))->zipCode);
+        self::assertSame('75008', $normalizer->normalize(new Address(zipCode: '75008 CEDEX 08', country: 'FR'))->zipCode);
+        self::assertSame('0800', $normalizer->normalize(new Address(zipCode: '800', country: 'AU'))->zipCode);
+
         $permutator = $container->get(AddressPermutator::class);
         self::assertInstanceOf(AddressPermutator::class, $permutator);
         self::assertCount(5, $permutator->permute(new Address('Müllerstraße', '1a', '1010', 'Wien', 'AT')));

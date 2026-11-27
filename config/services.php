@@ -8,6 +8,7 @@ use Binable\AddressKit\Normalizer\AddressNormalizer;
 use Binable\AddressKit\Normalizer\CountryNormalizer;
 use Binable\AddressKit\Normalizer\EncodingNormalizer;
 use Binable\AddressKit\Normalizer\WhitespaceNormalizer;
+use Binable\AddressKit\Normalizer\ZipCodeNormalizer;
 use Binable\AddressKit\Permutation\AddressPermutator;
 use Binable\AddressKit\Validator\Constraints\KnownStreetValidator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -35,6 +36,7 @@ return static function (ContainerConfigurator $container): void {
     $services->load('Binable\\AddressKit\\Normalizer\\Encoding\\', '../src/Normalizer/Encoding/*Normalizer.php');
     $services->load('Binable\\AddressKit\\Normalizer\\Whitespace\\', '../src/Normalizer/Whitespace/*Normalizer.php');
     $services->load('Binable\\AddressKit\\Normalizer\\Country\\', '../src/Normalizer/Country/*Normalizer.php');
+    $services->load('Binable\\AddressKit\\Normalizer\\ZipCode\\', '../src/Normalizer/ZipCode/*Normalizer.php');
 
     $services->set(EncodingNormalizer::class)
         ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_ENCODING_NORMALIZER))
@@ -48,6 +50,9 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$defaultCountry', param('address_kit.default_country'))
         ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_COUNTRY_NORMALIZER))
         ->public();
+
+    $services->set(ZipCodeNormalizer::class)
+        ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_ZIP_CODE_NORMALIZER));
 
     $services->set(AddressNormalizer::class)
         ->arg('$normalizers', tagged_iterator(AddressKitBundle::TAG_NORMALIZER))
