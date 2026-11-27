@@ -106,10 +106,20 @@ final readonly class AddressPermutator
             new Strategy\Pl\GivenNamePermutation(),
             new Strategy\Pl\TitlePermutation(),
             new Strategy\Pl\StreetTypePermutation(),
+            // pt
+            new Strategy\Pt\StreetTypePermutation(),
+            // ro
+            new Strategy\Ro\StreetTypePermutation(),
+            // cs
+            new Strategy\Cs\StreetTypePermutation(),
+            // lt
+            new Strategy\Lt\StreetTypePermutation(),
             // da
             new Strategy\Da\LetterPermutation(),
             new Strategy\Da\AccentPermutation(),
             new Strategy\Da\PrefixPermutation(),
+            new Strategy\Da\LinkingSPermutation(),
+            new Strategy\Da\BygadePermutation(),
             new Strategy\Da\StreetTermPermutation(),
         ];
     }

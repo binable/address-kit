@@ -89,6 +89,26 @@ final class AddressPermutatorTest extends TestCase
      *
      * @return list<string|null>
      */
+    public function testDefaultContainsEveryBuiltInStrategy(): void
+    {
+        $directory = \dirname(__DIR__, 2).'/src/Permutation/Strategy';
+        $expected = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS)) as $file) {
+            $relative = substr($file->getPathname(), \strlen($directory) + 1, -4);
+            $class = 'Binable\\AddressKit\\Permutation\\Strategy\\'.str_replace('/', '\\', $relative);
+            if (!(new \ReflectionClass($class))->isAbstract()) {
+                $expected[] = $class;
+            }
+        }
+
+        $strategies = (new \ReflectionProperty(AddressPermutator::class, 'strategies'))->getValue(AddressPermutator::createDefault());
+        $actual = array_map(static fn (object $strategy): string => $strategy::class, [...$strategies]);
+
+        sort($expected);
+        sort($actual);
+        self::assertSame($expected, $actual);
+    }
+
     private static function streets(array $variants): array
     {
         return array_values(array_unique(array_map(static fn (Address $a): ?string => $a->street, $variants)));
