@@ -24,7 +24,7 @@ final class UmlautPermutation extends AbstractGermanPermutation
      *
      * @var array<string, string>
      */
-    private const TO_ASCII = [
+    public const TO_ASCII = [
         'ä' => 'ae',
         'ö' => 'oe',
         'ü' => 'ue',

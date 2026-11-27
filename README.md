@@ -179,6 +179,27 @@ street names may end with a number (`State Highway 42`, `Avenue du 8 Mai 1945`).
 other countries keep their spelling (`74G`, `30/A`, `Storgatan 18 A`). House numbers not starting with a digit
 (house names like `Ivy Cottage`, grid addresses like `N8342`) are never re-cased.
 
+### Street key
+
+`StreetNormalizer` writes abbreviations out for display. To *compare* German street names (DE, AT, CH, LI),
+e.g. user input against the street list of a register or an API, use `StreetKey::create()` on both sides:
+
+```php
+use Binable\AddressKit\Normalizer\StreetKey;
+
+StreetKey::create('Hauptstraße');        // 'hauptstr.'
+StreetKey::create('HAUPTSTRASSE');       // 'hauptstr.'
+StreetKey::create('Müllerweg');          // 'muellerweg'
+StreetKey::create('Str. des 17. Juni');  // 'str. des 17. juni'
+StreetKey::create('Straßenbahnweg');     // 'strassenbahnweg' (no generic term)
+```
+
+Steps: encoding and whitespace cleanup (non-breaking spaces, repeated spaces, trailing `,`), lower case,
+`ä/ö/ü/ß` → `ae/oe/ue/ss`, and every spelling of the generic term (`straße`, `strasse`, `str.`, `str` and the
+typos `strase`, `stasse`, `str..`) → `str.` – only as a whole word or word ending. The key is never meant for
+display. Hyphenation (`Albert-Einstein-Str.` vs. `Albert Einstein Str.`) is not unified, use the
+[permutator](#permutation) for that.
+
 ### Country
 
 `CountryNormalizer` runs the country through the steps
