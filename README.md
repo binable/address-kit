@@ -88,6 +88,7 @@ but it skips blank values.
 
 Only the first number of the house number counts: `12a`, `12/3` and `12-14` are compared as `12`; a house
 number without digits is never in range. An invalid range throws a `ConstraintDefinitionException`.
+The number is taken from [`HouseNumber::parse()`](#house-number-parsing).
 
 #### KnownStreet
 
@@ -359,6 +360,31 @@ StreetTypes::getAllSpellings();            // every spelling, e.g. for a regex
 ```
 
 Both `AddressNormalizer::createDefault()` and `AddressPermutator::createDefault()` work without the container.
+
+## House number parsing
+
+`Model\HouseNumber::parse()` splits a house number into number, addition and range end – the same
+parsing `HouseNumberInRange` uses, available for your own code (e.g. matching against a register that
+stores number and addition separately):
+
+```php
+use Binable\AddressKit\Model\HouseNumber;
+
+$houseNumber = HouseNumber::parse('12-14a');
+$houseNumber->number;    // 12
+$houseNumber->rangeEnd;  // 14
+$houseNumber->addition;  // 'a'
+$houseNumber->isRange(); // true
+
+HouseNumber::parse('12/3')->addition;  // '3'
+HouseNumber::parse('16 bis')->addition; // 'bis'
+HouseNumber::parse('N8342')->prefix;   // 'N'
+HouseNumber::parse('Rose Cottage');    // null, no digit
+```
+
+Only the first group of digits is the number. A range end must be above the start (`12-3` is house 12,
+addition `3`). One separator (`/`, `-`) and whitespace before the addition are dropped, its spelling
+is kept (`12 A` → `A`).
 
 ## Development
 

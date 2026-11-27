@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Validator\Constraints;
 
+use Binable\AddressKit\Model\HouseNumber;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
@@ -13,8 +14,8 @@ use Symfony\Component\Validator\Exception\UnexpectedValueException;
  * Checks whether a house number falls within a range expression.
  *
  * The house number may contain a suffix letter ("6a"), a flat ("12/3") or a
- * range ("5-7") - only the first number is used for comparison. A house number
- * without any digit is never contained.
+ * range ("5-7") - only the first number is used for comparison, see
+ * {@see HouseNumber::parse()}. A house number without any digit is never contained.
  *
  * Supported expression formats (whitespace around the operators is ignored):
  *   "5"           — exact match
@@ -68,13 +69,12 @@ final class HouseNumberInRangeValidator extends ConstraintValidator
 
     private function contains(string|int $houseNumber, string $expression): bool
     {
-        // Only the first group of digits: "12/3" is house 12, flat 3, and
-        // "5-7" starts at house 5 — gluing the digits would make 123 and 57.
-        if (1 !== preg_match('/\d+/', (string) $houseNumber, $match)) {
+        $parsed = HouseNumber::parse($houseNumber);
+        if (null === $parsed) {
             return false;
         }
 
-        $number = (int) $match[0];
+        $number = $parsed->number;
 
         foreach (explode(',', $expression) as $block) {
             if ($this->matchesBlock($number, trim($block))) {
