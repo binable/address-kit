@@ -314,6 +314,7 @@ country uses that language for street names, according to the `Language\StreetLa
 | `ro`     | RO                    |
 | `cs`     | CZ                    |
 | `lt`     | LT                    |
+| `sv`     | SE                    |
 
 A German address only gets the `de` strategies, a Swiss one `de`, `fr` and `it`. Addresses without a
 (known) country only get the language independent strategies. The defaults are conservative: Flanders and
@@ -367,6 +368,7 @@ address_kit:
 | da       | `StreetTermPermutation`          | `Skovvej` ⇄ `Skovvejen`                                              |
 | da       | `LinkingSPermutation`            | `Guldregnsvej` ⇄ `Guldregnvej`                                       |
 | da       | `BygadePermutation`              | `Lemming Bygade` ⇄ `Lemmingbygade`                                   |
+| sv       | `DiacriticPermutation`           | `Malmö` ⇄ `Malmo`, `Vasterlanggatan` → `Västerlånggatan`             |
 
 Add your own strategy by implementing `PermutationStrategyInterface` (language independent) or
 `LocalizedPermutationStrategyInterface`.

@@ -46,6 +46,7 @@ final readonly class StreetLanguageMap
         'PL' => ['pl'],
         'PT' => ['pt'],
         'RO' => ['ro'],
+        'SE' => ['sv'],
         'SM' => ['it'],
         'US' => ['en'],
         'ZA' => ['en'],

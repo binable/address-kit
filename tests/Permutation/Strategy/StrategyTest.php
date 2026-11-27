@@ -95,6 +95,12 @@ final class StrategyTest extends TestCase
         yield 'da bygade glued' => [new Strategy\Da\BygadePermutation(), 'Lemming Bygade', ['Lemmingbygade']];
         yield 'da bygade split' => [new Strategy\Da\BygadePermutation(), 'Hjerkbygaden', ['Hjerk Bygaden']];
         yield 'da bygade upper case' => [new Strategy\Da\BygadePermutation(), 'LEMMINGBYGADE', ['LEMMING BYGADE']];
+
+        // sv
+        yield 'sv diacritic folded' => [new Strategy\Sv\DiacriticPermutation(), 'Järnvägsgatan', ['Jarnvagsgatan']];
+        yield 'sv diacritic compound' => [new Strategy\Sv\DiacriticPermutation(), 'Vasterlanggatan', ['Västerlånggatan']];
+        yield 'sv diacritic term' => [new Strategy\Sv\DiacriticPermutation(), 'Sodra Bjorkvagen', ['Södra Björkvägen']];
+        yield 'sv diacritic upper case' => [new Strategy\Sv\DiacriticPermutation(), 'OSTRA HAMNGATAN', ['ÖSTRA HAMNGATAN']];
     }
 
     /**
@@ -130,6 +136,20 @@ final class StrategyTest extends TestCase
         );
 
         self::assertSame(['Lodz'], $cities);
+    }
+
+    public function testSwedishDiacriticsOnCity(): void
+    {
+        $cities = static fn (string $city): array => array_map(
+            static fn (Address $a): ?string => $a->city,
+            iterator_to_array((new Strategy\Sv\DiacriticPermutation())->permute(new Address(null, null, null, $city)), false),
+        );
+
+        self::assertSame(['Malmo'], $cities('Malmö'));
+        self::assertSame(['Göteborg'], $cities('Goteborg'));
+        // unknown words are not given diacritics
+        self::assertSame([], $cities('Stockholm'));
+        self::assertSame([], $cities('Uppsala'));
     }
 
     public function testDanishLinkingSIsGuarded(): void

@@ -121,6 +121,8 @@ final readonly class AddressPermutator
             new Strategy\Da\LinkingSPermutation(),
             new Strategy\Da\BygadePermutation(),
             new Strategy\Da\StreetTermPermutation(),
+            // sv
+            new Strategy\Sv\DiacriticPermutation(),
         ];
     }
 
