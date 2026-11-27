@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Permutation\Strategy\It;
 
+use Binable\AddressKit\Language\It\StreetTypes;
 use Binable\AddressKit\Permutation\LocalizedPermutationStrategyInterface;
 use Binable\AddressKit\Permutation\Strategy\AbstractLeadingTypePermutation;
 
@@ -24,44 +25,9 @@ use Binable\AddressKit\Permutation\Strategy\AbstractLeadingTypePermutation;
 abstract class AbstractItalianPermutation extends AbstractLeadingTypePermutation implements LocalizedPermutationStrategyInterface
 {
     /**
-     * Every spelling of a "tipo di via". First entry is the full one, the
-     * others are the abbreviations the comuni, ISTAT and Poste Italiane use.
-     *
-     * Terms that are just as often the first word of the name itself are left
-     * out on purpose ("Ponte Vecchio", "Villa Serena", "Parco della Vittoria"):
-     * permuting those only produces dead lookups. The bare "P." is left out for
-     * the same reason - it stands for piazza, piazzale, passaggio and for the
-     * initial of a given name alike.
-     *
-     * @var array<string, list<string>>
+     * @see StreetTypes::TYPES
      */
-    protected const TYPES = [
-        'circonvallazione' => ['circonvallazione', 'circonv.', 'circ.ne'],
-        'lungomare' => ['lungomare', 'l.mare', 'lgm.'],
-        'quartiere' => ['quartiere', 'quart.', 'q.re'],
-        'frazione' => ['frazione', 'fraz.', 'fz.'],
-        'località' => ['località', 'loc.', 'localita', "localita'"],
-        'piazzetta' => ['piazzetta', 'p.tta', 'pz.tta'],
-        'piazzale' => ['piazzale', 'p.le', 'ple', 'pzle'],
-        'traversa' => ['traversa', 'trav.', 'tr.'],
-        'contrada' => ['contrada', 'c.da', 'ctr.'],
-        'galleria' => ['galleria', 'gall.', 'gall'],
-        'borgata' => ['borgata', 'b.ta', 'bg.ta'],
-        'discesa' => ['discesa', 'disc.'],
-        'stradone' => ['stradone', 'strad.ne'],
-        'vicolo' => ['vicolo', 'vic.', 'v.lo', 'vco'],
-        'piazza' => ['piazza', 'p.zza', 'p.za', 'pzza', 'pza'],
-        'strada' => ['strada', 'str.', 's.da'],
-        'salita' => ['salita', 'sal.'],
-        'rione' => ['rione', 'r.ne'],
-        'viale' => ['viale', 'v.le', 'vle'],
-        'corso' => ['corso', 'c.so', 'cso'],
-        'largo' => ['largo', 'l.go', 'lgo'],
-        'borgo' => ['borgo', 'b.go', 'bgo'],
-        'calle' => ['calle'],
-        'campo' => ['campo', 'c.po'],
-        'via' => ['via', 'v.'],
-    ];
+    protected const TYPES = StreetTypes::TYPES;
 
     public function getLanguage(): string
     {

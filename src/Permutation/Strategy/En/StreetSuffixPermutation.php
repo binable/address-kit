@@ -9,8 +9,11 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * All spellings of the street suffix: "Sunset Boulevard" / "Sunset Blvd" /
- * "Sunset". The bare name is what a gazetteer stores that keeps the suffix in
- * a column of its own.
+ * "Sunset", "Maple Crescent" / "Maple Cres" / "Maple Cr" / "Maple". The bare
+ * name is what a gazetteer stores that keeps the suffix in a column of its own.
+ *
+ * US addresses get the USPS abbreviations, all others the Commonwealth ones,
+ * see {@see AbstractEnglishPermutation}.
  *
  * A street that leads with its type ("Avenue H") only swaps the spelling - the
  * type is all that tells "Avenue H" from "H Street".
@@ -24,11 +27,13 @@ final class StreetSuffixPermutation extends AbstractEnglishPermutation
             return;
         }
 
-        $parts = $this->parse($address->street);
+        $parts = $this->parse($address, $address->street);
+        $suffixes = $this->getSuffixes($address);
+        $upperCase = $this->isUpperCase($address->street);
 
-        $spelling = null === $parts['suffix'] ? null : $this->findSpelling($parts['suffix'], self::SUFFIXES);
-        if (null !== $spelling) {
-            foreach ([...$spelling, null] as $suffix) {
+        $spellings = null === $parts['suffix'] ? null : $this->findSpellings($parts['suffix'], $suffixes, $upperCase);
+        if (null !== $spellings) {
+            foreach ([...$spellings, null] as $suffix) {
                 yield from $this->yieldStreet($address, $this->build(['suffix' => $suffix] + $parts));
             }
 
@@ -36,7 +41,7 @@ final class StreetSuffixPermutation extends AbstractEnglishPermutation
         }
 
         $words = $parts['name'];
-        $leading = \count($words) >= 2 ? $this->findSpelling($words[0], self::SUFFIXES) : null;
+        $leading = \count($words) >= 2 ? $this->findSpellings($words[0], $suffixes, $upperCase) : null;
         if (null === $leading) {
             return;
         }

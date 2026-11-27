@@ -16,8 +16,9 @@ namespace Binable\AddressKit\Language;
  * - South Tyrol (IT) and East Belgium (BE) also use German street names and Flanders (BE) uses Dutch
  *   ones, but they are not listed. Add them via {@see __construct()} (bundle option
  *   "address_kit.street_languages") if your data needs them.
- * - English is limited to the US: the permutations follow the USPS abbreviations, and in GB, IE, NZ
- *   and CA "St" doubles as "Saint".
+ * - English covers the US (USPS abbreviations) and GB, IE, AU, NZ and ZA (their own street types, see
+ *   {@see En\StreetTypes}). Canada is left out: its street names mix English and French, and "St" in
+ *   front of a name is "Saint" there.
  */
 final readonly class StreetLanguageMap
 {
@@ -26,19 +27,28 @@ final readonly class StreetLanguageMap
      */
     public const DEFAULT = [
         'AT' => ['de'],
+        'AU' => ['en'],
         'BE' => ['fr'],
         'CH' => ['de', 'fr', 'it'],
+        'CZ' => ['cs'],
         'DE' => ['de'],
         'DK' => ['da'],
         'FR' => ['fr'],
+        'GB' => ['en'],
+        'IE' => ['en'],
         'IT' => ['it'],
         'LI' => ['de'],
+        'LT' => ['lt'],
         'LU' => ['fr'],
         'MC' => ['fr'],
         'NL' => ['nl'],
+        'NZ' => ['en'],
         'PL' => ['pl'],
+        'PT' => ['pt'],
+        'RO' => ['ro'],
         'SM' => ['it'],
         'US' => ['en'],
+        'ZA' => ['en'],
     ];
 
     /**

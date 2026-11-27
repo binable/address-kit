@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Permutation\Strategy\Pl;
 
+use Binable\AddressKit\Language\Pl\StreetTypes;
 use Binable\AddressKit\Permutation\LocalizedPermutationStrategyInterface;
 use Binable\AddressKit\Permutation\Strategy\AbstractLeadingTypePermutation;
 
@@ -26,29 +27,9 @@ use Binable\AddressKit\Permutation\Strategy\AbstractLeadingTypePermutation;
 abstract class AbstractPolishPermutation extends AbstractLeadingTypePermutation implements LocalizedPermutationStrategyInterface
 {
     /**
-     * Every spelling of a generic term. First entry is the full one, the
-     * others are the abbreviations the gminy and the TERYT register use.
-     *
-     * "park", "rynek" and "szlak" are left out on purpose: they are the first
-     * word of the name itself ("Rynek Główny", "Park Kościuszki") at least as
-     * often as they are a generic term, and permuting those only produces dead
-     * lookups.
-     *
-     * @var array<string, list<string>>
+     * @see StreetTypes::TYPES
      */
-    protected const TYPES = [
-        'wybrzeże' => ['wybrzeże', 'wybrzeze', 'wyb.'],
-        'osiedle' => ['osiedle', 'os.', 'os'],
-        'bulwar' => ['bulwar', 'bulwary', 'bulw.'],
-        'skwer' => ['skwer', 'skw.'],
-        'ulica' => ['ulica', 'ul.', 'ul'],
-        'aleja' => ['aleja', 'aleje', 'al.', 'al'],
-        'pasaż' => ['pasaż', 'pasaz'],
-        'plac' => ['plac', 'pl.', 'pl'],
-        'rondo' => ['rondo'],
-        'szosa' => ['szosa'],
-        'droga' => ['droga'],
-    ];
+    protected const TYPES = StreetTypes::TYPES;
 
     public function getLanguage(): string
     {

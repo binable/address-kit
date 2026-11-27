@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Permutation\Strategy\Fr;
 
+use Binable\AddressKit\Language\Fr\StreetTypes;
 use Binable\AddressKit\Permutation\LocalizedPermutationStrategyInterface;
 use Binable\AddressKit\Permutation\Strategy\AbstractLeadingTypePermutation;
 
@@ -24,48 +25,9 @@ use Binable\AddressKit\Permutation\Strategy\AbstractLeadingTypePermutation;
 abstract class AbstractFrenchPermutation extends AbstractLeadingTypePermutation implements LocalizedPermutationStrategyInterface
 {
     /**
-     * Every spelling of a "type de voie", the generic term a French street
-     * name starts with. First entry is the full one, the others are the
-     * abbreviations the registers of La Poste, the BAN and the communes use.
-     *
-     * Types that are just as often the first word of the name itself are left
-     * out on purpose ("Le Clos", "La Croix", "Les Jardins"): permuting those
-     * only produces dead lookups.
-     *
-     * @var array<string, list<string>>
+     * @see StreetTypes::TYPES
      */
-    protected const TYPES = [
-        'rond-point' => ['rond-point', 'rd-pt', 'rd pt', 'rpt'],
-        'lotissement' => ['lotissement', 'lot.', 'lot'],
-        'résidence' => ['résidence', 'rés.', 'res.', 'residence'],
-        'esplanade' => ['esplanade', 'espl.', 'esp.'],
-        'promenade' => ['promenade', 'prom.'],
-        'grande rue' => ['grande rue', 'gde rue', 'grand rue'],
-        'boulevard' => ['boulevard', 'bd', 'bd.', 'bld', 'blvd', 'boul.'],
-        'chaussée' => ['chaussée', 'chée', 'chaussee'],
-        'faubourg' => ['faubourg', 'fbg', 'fg'],
-        'traverse' => ['traverse', 'trav.'],
-        'passage' => ['passage', 'pass.', 'psg'],
-        'sentier' => ['sentier', 'sent.', 'sen.'],
-        'impasse' => ['impasse', 'imp.', 'imp'],
-        // "avenu" is the common typo with the final e dropped ("Avenu des Mimosas").
-        'avenue' => ['avenue', 'av.', 'av', 'ave', 'avenu'],
-        'hameau' => ['hameau', 'ham.', 'hme'],
-        'domaine' => ['domaine', 'dom.'],
-        'montée' => ['montée', 'mtée', 'montee'],
-        'venelle' => ['venelle', 'ven.'],
-        'ruelle' => ['ruelle', 'rle'],
-        'square' => ['square', 'sq.', 'sq'],
-        'chemin' => ['chemin', 'chem.', 'ch.', 'che'],
-        'allée' => ['allée', 'all.', 'all', 'allee'],
-        'place' => ['place', 'pl.', 'pl'],
-        'route' => ['route', 'rte', 'rte.'],
-        'cours' => ['cours', 'crs'],
-        'villa' => ['villa', 'vla'],
-        'quai' => ['quai', 'qu.'],
-        'voie' => ['voie'],
-        'rue' => ['rue', 'r.'],
-    ];
+    protected const TYPES = StreetTypes::TYPES;
 
     public function getLanguage(): string
     {

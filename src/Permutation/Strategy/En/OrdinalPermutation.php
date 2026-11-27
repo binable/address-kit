@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Binable\AddressKit\Permutation\Strategy\En;
 
+use Binable\AddressKit\Language\En\Ordinals;
 use Binable\AddressKit\Model\Address;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -21,8 +22,8 @@ final class OrdinalPermutation extends AbstractEnglishPermutation
             return;
         }
 
-        $spelled = array_change_key_case(self::ORDINALS);
-        $figures = array_change_key_case(array_flip(self::ORDINALS));
+        $spelled = array_change_key_case(Ordinals::SPELLED_OUT);
+        $figures = array_change_key_case(array_flip(Ordinals::SPELLED_OUT));
 
         $original = $this->toWords($address->street);
         $words = [];

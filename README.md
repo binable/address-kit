@@ -269,9 +269,13 @@ country uses that language for street names, according to the `Language\StreetLa
 | `fr`     | FR, BE, CH, LU, MC    |
 | `it`     | IT, CH, SM            |
 | `nl`     | NL                    |
-| `en`     | US (USPS abbreviations) |
+| `en`     | US (USPS abbreviations), GB, IE, AU, NZ, ZA (Commonwealth types) |
 | `pl`     | PL                    |
 | `da`     | DK                    |
+| `pt`     | PT                    |
+| `ro`     | RO                    |
+| `cs`     | CZ                    |
+| `lt`     | LT                    |
 
 A German address only gets the `de` strategies, a Swiss one `de`, `fr` and `it`. Addresses without a
 (known) country only get the language independent strategies. The defaults are conservative: Flanders and
@@ -302,7 +306,7 @@ address_kit:
 | nl       | `StreetPermutation`              | `Burgemeester van der Vlugtstraat` ⇄ `Burg. v.d. Vlugtstr.`           |
 | en       | `OrdinalPermutation`             | `2nd Ave` ⇄ `Second Ave`                                             |
 | en       | `DirectionalPermutation`         | `W Sunset Blvd` ⇄ `West Sunset Blvd` ⇄ `Sunset Blvd`                 |
-| en       | `StreetSuffixPermutation`        | `Sunset Boulevard` ⇄ `Sunset Blvd` ⇄ `Sunset`                        |
+| en       | `StreetSuffixPermutation`        | `Sunset Boulevard` ⇄ `Sunset Blvd` ⇄ `Sunset`, `Maple Cres` ⇄ `Maple Crescent` (outside the US) |
 | fr       | `AccentPermutation`              | `Rue de l’Église` ⇄ `Rue de l'Eglise`                                |
 | fr       | `HyphenPermutation`              | `Avenue du Général de Gaulle` ⇄ `Avenue du Général-de-Gaulle`        |
 | fr       | `TitlePermutation`               | `Rue Saint-Étienne` ⇄ `Rue St-Étienne`                               |
@@ -315,6 +319,10 @@ address_kit:
 | pl       | `GivenNamePermutation`           | `ul. Tadeusza Kościuszki` → `ul. T. Kościuszki`, `ul. Kościuszki`    |
 | pl       | `TitlePermutation`               | `ul. Generała Andersa` ⇄ `ul. Gen. Andersa`                          |
 | pl       | `StreetTypePermutation`          | `ul. Długa` ⇄ `ulica Długa` ⇄ `Długa`                                |
+| pt       | `StreetTypePermutation`          | `Av. da República` ⇄ `Avenida da República`, `Praca` ⇄ `Praça` ⇄ `Pç.` |
+| ro       | `StreetTypePermutation`          | `B-dul Unirii` ⇄ `Bulevardul Unirii` ⇄ `Bd. Unirii`, `Şoseaua` ⇄ `Șoseaua` |
+| cs       | `StreetTypePermutation`          | `nám. Míru` ⇄ `náměstí Míru`, `Národní tř.` ⇄ `Národní třída`, `ul. Masarykova` → `Masarykova` |
+| lt       | `StreetTypePermutation`          | `Vilniaus g.` ⇄ `Vilniaus gatvė` ⇄ `Vilniaus`                         |
 | da       | `LetterPermutation`              | `Nørregade` ⇄ `Noerregade` ⇄ `Norregade`, `Aabenraa` ⇄ `Åbenrå`       |
 | da       | `AccentPermutation`              | `Allé` ⇄ `Alle`                                                      |
 | da       | `PrefixPermutation`              | `Gammel Kongevej` ⇄ `Gl. Kongevej`                                   |
@@ -324,6 +332,31 @@ address_kit:
 
 Add your own strategy by implementing `PermutationStrategyInterface` (language independent) or
 `LocalizedPermutationStrategyInterface`.
+
+### Street type dictionaries
+
+The tables the strategies build on are public, so code outside the kit can strip, expand or compare
+street types without keeping a copy of its own:
+
+| Class                                  | Content                                                      |
+|----------------------------------------|--------------------------------------------------------------|
+| `Language\En\UspsAbbreviations`        | USPS suffixes and directionals, full => abbreviation         |
+| `Language\En\Ordinals`                 | `2nd` => `Second`                                            |
+| `Language\En\StreetTypes`              | GB, IE, AU, NZ, ZA: `close`, `crescent`, `mews`, `parade`, … |
+| `Language\{Fr,It,Pl,Pt,Ro,Cs,Lt,Lv}\StreetTypes` | the generic terms of that language               |
+
+Every `StreetTypes` class lists `TYPES` (canonical term => every spelling, full one first) and
+`NAME_LIKE_TYPES` (terms that are just as often part of the name, like `Park`, `Clos` or `Ponte`;
+the strategies leave them alone). The lookups are case insensitive and ignore a trailing full stop:
+
+```php
+use Binable\AddressKit\Language\Pt\StreetTypes;
+
+StreetTypes::getCanonical('Av.');          // 'avenida'
+StreetTypes::getSpellings('praca');        // ['praça', 'praca', 'pç.', …]
+StreetTypes::isType('Quinta', true);       // true, name-like terms included
+StreetTypes::getAllSpellings();            // every spelling, e.g. for a regex
+```
 
 Both `AddressNormalizer::createDefault()` and `AddressPermutator::createDefault()` work without the container.
 

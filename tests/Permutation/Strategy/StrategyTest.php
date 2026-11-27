@@ -42,6 +42,7 @@ final class StrategyTest extends TestCase
         yield 'en suffix' => [new Strategy\En\StreetSuffixPermutation(), 'Sunset Boulevard', ['Sunset Blvd', 'Sunset']];
         yield 'en directional' => [new Strategy\En\DirectionalPermutation(), 'W Sunset Blvd', ['West Sunset Blvd', 'Sunset Blvd']];
         yield 'en ordinal' => [new Strategy\En\OrdinalPermutation(), '2nd Ave', ['Second Ave']];
+        yield 'en suffix upper case' => [new Strategy\En\StreetSuffixPermutation(), 'SUNSET BLVD', ['SUNSET BOULEVARD', 'SUNSET']];
 
         // fr
         yield 'fr type' => [new Strategy\Fr\StreetTypePermutation(), 'Av. de la Gare', ['Avenue de la Gare', 'Av de la Gare', 'Ave de la Gare']];
@@ -61,6 +62,27 @@ final class StrategyTest extends TestCase
         yield 'pl given name' => [new Strategy\Pl\GivenNamePermutation(), 'ul. Tadeusza Kościuszki', ['ul. Kościuszki', 'ul. T. Kościuszki']];
         yield 'pl title' => [new Strategy\Pl\TitlePermutation(), 'ul. Generała Andersa', ['ul. Gen. Andersa']];
         yield 'pl diacritic' => [new Strategy\Pl\DiacriticPermutation(), 'ul. Swietokrzyska', ['ul. Świętokrzyska']];
+
+        // pt
+        yield 'pt type' => [new Strategy\Pt\StreetTypePermutation(), 'Av. da República', ['Avenida da República', 'Av da República']];
+        yield 'pt type folded' => [new Strategy\Pt\StreetTypePermutation(), 'Praca do Comércio', ['Praça do Comércio', 'Pç. do Comércio']];
+        yield 'pt type single letter' => [new Strategy\Pt\StreetTypePermutation(), 'R. Augusta', ['Rua Augusta', 'R Augusta']];
+
+        // ro
+        yield 'ro type' => [new Strategy\Ro\StreetTypePermutation(), 'Str. Mihai Eminescu', ['Strada Mihai Eminescu']];
+        yield 'ro type hyphen' => [new Strategy\Ro\StreetTypePermutation(), 'B-dul Unirii', ['Bulevardul Unirii', 'Bd. Unirii']];
+        yield 'ro type cedilla' => [new Strategy\Ro\StreetTypePermutation(), 'Şoseaua Kiseleff', ['Șoseaua Kiseleff', 'Soseaua Kiseleff', 'Șos. Kiseleff']];
+
+        // cs
+        yield 'cs type leading' => [new Strategy\Cs\StreetTypePermutation(), 'nám. Míru', ['náměstí Míru', 'namesti Míru']];
+        yield 'cs type trailing' => [new Strategy\Cs\StreetTypePermutation(), 'Národní tř.', ['Národní třída']];
+        yield 'cs type capitalised' => [new Strategy\Cs\StreetTypePermutation(), 'Náměstí Republiky', ['Nám. Republiky']];
+        yield 'cs ulice dropped' => [new Strategy\Cs\StreetTypePermutation(), 'ul. Masarykova', ['Masarykova']];
+
+        // lt
+        yield 'lt type' => [new Strategy\Lt\StreetTypePermutation(), 'Vilniaus g.', ['Vilniaus gatvė', 'Vilniaus gatve', 'Vilniaus']];
+        yield 'lt type full' => [new Strategy\Lt\StreetTypePermutation(), 'Gedimino prospektas', ['Gedimino pr.', 'Gedimino']];
+        yield 'lt type implied' => [new Strategy\Lt\StreetTypePermutation(), 'Vilniaus', ['Vilniaus g.']];
 
         // da
         yield 'da letter' => [new Strategy\Da\LetterPermutation(), 'Nørregade', ['Noerregade', 'Norregade']];
@@ -129,6 +151,34 @@ final class StrategyTest extends TestCase
         }
     }
 
+    public function testEnglishOutsideTheUsUsesTheCommonwealthTypes(): void
+    {
+        $streets = static fn (PermutationStrategyInterface $strategy, Address $address): array => array_map(
+            static fn (Address $a): ?string => $a->street,
+            iterator_to_array($strategy->permute($address), false),
+        );
+
+        $suffix = new Strategy\En\StreetSuffixPermutation();
+        self::assertSame(['Maple Crescent', 'Maple Cr', 'Maple'], $streets($suffix, new Address('Maple Cres', null, null, null, 'AU')));
+        self::assertSame(['Marine Parade', 'Marine'], $streets($suffix, new Address('Marine Pde', null, null, null, 'NZ')));
+        self::assertSame(['Sunset Blvd', 'Sunset'], $streets($suffix, new Address('Sunset Boulevard', null, null, null, 'US')));
+        // "Mews" is no USPS suffix, "Victoria Park" keeps its name-like "Park"
+        self::assertSame(['Kings'], $streets($suffix, new Address('Kings Mews', null, null, null, 'GB')));
+        self::assertSame([], $streets($suffix, new Address('Victoria Park', null, null, null, 'GB')));
+
+        // "East Kilbride" is a name, not a directional
+        self::assertSame([], $streets(new Strategy\En\DirectionalPermutation(), new Address('East Kilbride Road', null, null, null, 'GB')));
+        self::assertNotSame([], $streets(new Strategy\En\DirectionalPermutation(), new Address('East Kilbride Road', null, null, null, 'US')));
+    }
+
+    public function testNameLikeTermsAreLeftAlone(): void
+    {
+        foreach ([[new Strategy\Lt\StreetTypePermutation(), 'Vingio parkas'], [new Strategy\Cs\StreetTypePermutation(), 'Riegrovy sady'], [new Strategy\Cs\StreetTypePermutation(), 'Masarykova']] as [$strategy, $street]) {
+            $streets = array_map(static fn (Address $a): ?string => $a->street, iterator_to_array($strategy->permute(new Address($street)), false));
+            self::assertSame([], $streets, $street);
+        }
+    }
+
     public function testNullStreetIsIgnored(): void
     {
         foreach (self::streetProvider() as [$strategy]) {
@@ -152,5 +202,9 @@ final class StrategyTest extends TestCase
         self::assertSame('it', $languages[Strategy\It\StreetTypePermutation::class]);
         self::assertSame('pl', $languages[Strategy\Pl\StreetTypePermutation::class]);
         self::assertSame('da', $languages[Strategy\Da\StreetTermPermutation::class]);
+        self::assertSame('pt', $languages[Strategy\Pt\StreetTypePermutation::class]);
+        self::assertSame('ro', $languages[Strategy\Ro\StreetTypePermutation::class]);
+        self::assertSame('cs', $languages[Strategy\Cs\StreetTypePermutation::class]);
+        self::assertSame('lt', $languages[Strategy\Lt\StreetTypePermutation::class]);
     }
 }

@@ -13,8 +13,10 @@ namespace Binable\AddressKit\Permutation\Strategy;
  * "Kerkstraat") and therefore do not build on this class.
  *
  * Every subclass declares the spellings of its own generic terms in
- * {@see static::TYPES}; the shared part is telling the term from the name and
- * finding the first word the name is actually built from.
+ * {@see static::TYPES}, taken from the public dictionary of its language
+ * ({@see \Binable\AddressKit\Language\Fr\StreetTypes}, …); the shared part
+ * is telling the term from the name and finding the first word the name is
+ * actually built from.
  */
 abstract class AbstractLeadingTypePermutation extends AbstractPermutation
 {

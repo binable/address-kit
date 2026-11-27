@@ -96,6 +96,21 @@ abstract class AbstractPermutation implements PermutationStrategyInterface
     }
 
     /**
+     * A replacement in the case of the word it stands in for: all upper case
+     * for "NÁM.", the first letter for "Nám.", lower case for "nám.".
+     */
+    protected function matchCase(string $replacement, string $original): string
+    {
+        $letters = preg_replace('/[^\p{L}]/u', '', $original) ?? '';
+
+        return match (true) {
+            mb_strlen($letters) > 1 && $letters === mb_strtoupper($letters) => mb_strtoupper($replacement),
+            '' !== $letters && mb_substr($letters, 0, 1) === mb_strtoupper(mb_substr($letters, 0, 1)) => self::ucfirst($replacement),
+            default => mb_strtolower($replacement),
+        };
+    }
+
+    /**
      * Upper case first letter only ("piazza" -> "Piazza", "p.zza" -> "P.zza").
      */
     protected static function ucfirst(string $value): string
