@@ -37,6 +37,33 @@ final class HouseNumberTest extends ConstraintTestCase
         $this->assertViolation($code, $value, new HouseNumber());
     }
 
+    #[TestWith(['12a'])]
+    #[TestWith(['12-14'])]
+    #[TestWith(['Rose Cottage'])]
+    #[TestWith(['The Elms'])]
+    #[TestWith(['16 bis'])]
+    #[TestWith(['N8342'])]
+    #[TestWith(['1:75'])]
+    #[TestWith(['7½'])]
+    public function testInternationalValid(string $value): void
+    {
+        $this->assertValid($value, new HouseNumber(international: true));
+    }
+
+    #[TestWith(['-12'])]
+    #[TestWith(['12<b>'])]
+    #[TestWith(['12?a=1'])]
+    #[TestWith(['12;'])]
+    public function testInternationalInvalid(string $value): void
+    {
+        $this->assertViolation(Assert\Regex::REGEX_FAILED_ERROR, $value, new HouseNumber(international: true));
+    }
+
+    public function testExplicitPatternWins(): void
+    {
+        $this->assertViolation(Assert\Regex::REGEX_FAILED_ERROR, '16 bis', new HouseNumber(international: true, pattern: HouseNumber::DEFAULT_PATTERN));
+    }
+
     public function testRequired(): void
     {
         $this->assertViolation(Assert\NotBlank::IS_BLANK_ERROR, null, new HouseNumber(required: true));

@@ -9,6 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * City / locality name, e.g. "München", "Frankfurt am Main", "Saint-Étienne", "Halle (Saale)".
+ * With $international also "'s-Hertogenbosch", "2e Exloërmond", "Graz,03.Bez.:Geidorf" or "Dublin 6W".
  *
  * Composition (stops at the first failing rule):
  * NotBlank (if required) → Type(string) → Length → Regex
@@ -28,6 +29,14 @@ final class City extends Assert\Compound
      */
     public const DIGITS_PATTERN = '/^\p{L}[\p{L}\p{M}\d\s.,\'’´`\-\/()]*$/u';
 
+    /**
+     * Wider than DIGITS_PATTERN for international data: Dutch places start with an apostrophe
+     * ("'s-Hertogenbosch", "'t Zandt") or a digit ("2e Exloërmond"), Graz names its districts
+     * "Graz,03.Bez.:Geidorf", Dublin and Bucureşti carry their postal district ("Dublin 6W").
+     * At least one letter is required.
+     */
+    public const INTERNATIONAL_PATTERN = '/^(?=.*\p{L})[\p{L}\d\'’][\p{L}\p{M}\d\s.,\'’´`\-\/():]*$/u';
+
     public string $pattern;
 
     /**
@@ -40,12 +49,17 @@ final class City extends Assert\Compound
         public int $minLength = 2,
         public int $maxLength = 100,
         public bool $allowDigits = false,
+        public bool $international = false,
         ?string $pattern = null,
         public string $message = 'This value is not a valid city name.',
         ?array $groups = null,
         mixed $payload = null,
     ) {
-        $this->pattern = $pattern ?? ($allowDigits ? self::DIGITS_PATTERN : self::DEFAULT_PATTERN);
+        $this->pattern = $pattern ?? match (true) {
+            $international => self::INTERNATIONAL_PATTERN,
+            $allowDigits => self::DIGITS_PATTERN,
+            default => self::DEFAULT_PATTERN,
+        };
 
         parent::__construct(null, $groups, $payload);
     }

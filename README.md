@@ -47,12 +47,17 @@ the Symfony constraints (e.g. `Length::TOO_SHORT_ERROR`).
 | Constraint    | Composition                                                                                 | Required by default | Options                                                         |
 |---------------|---------------------------------------------------------------------------------------------|---------------------|-----------------------------------------------------------------|
 | `Street`      | NotBlank → Type(string) → Length(2–100) → Regex(allowed chars) → Regex(at least one letter) | yes                 | `minLength`, `maxLength`, `pattern`, messages                   |
-| `HouseNumber` | NotBlank → Type(string\|int) → Length(≤15) → Regex(`12`, `12a`, `12-14`, `12/1`, `7½`)      | **no**              | `maxLength`, `pattern`, `message`                               |
+| `HouseNumber` | NotBlank → Type(string\|int) → Length(≤15) → Regex(`12`, `12a`, `12-14`, `12/1`, `7½`)      | **no**              | `maxLength`, `international`, `pattern`, `message`              |
 | `ZipCode`     | NotBlank → Type(string\|int) → Length(2–10) → Regex(generic) → `ZipCodeForCountry`          | yes                 | `country`, `countryPath` (default `country`), `strict`, `caseSensitive`, lengths |
-| `City`        | NotBlank → Type(string) → Length(2–100) → Regex(starts with letter, no digits)              | yes                 | `minLength`, `maxLength`, `allowDigits`, `pattern`, `message`   |
+| `City`        | NotBlank → Type(string) → Length(2–100) → Regex(starts with letter, no digits)              | yes                 | `minLength`, `maxLength`, `allowDigits`, `international`, `pattern`, `message` |
 | `Country`     | NotBlank → Type(string) → Symfony `Country` (alpha-2/alpha-3) → Choice(allow-list)*         | yes                 | `alpha3`, `allowedCountries`, messages                          |
 
 \* only when the corresponding option is set.
+
+The defaults of `HouseNumber` and `City` are deliberately strict, as they fit form input in most shops.
+For international data `international: true` switches to the wider `INTERNATIONAL_PATTERN`:
+house numbers then also take house names (`Rose Cottage`), `16 bis`, `N8342` and `1:75`, cities
+`'s-Hertogenbosch`, `2e Exloërmond`, `Graz,03.Bez.:Geidorf` and `Dublin 6W`. An explicit `pattern` wins.
 
 `ZipCode` reads the country for the country specific check from the property `country` of the validated
 object by default, so `#[ZipCode]` works without parameters on typical address classes. A fixed

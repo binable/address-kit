@@ -35,4 +35,24 @@ final class CityTest extends ConstraintTestCase
     {
         $this->assertValid('Berlin 10', new City(allowDigits: true));
     }
+
+    #[TestWith(["'s-Hertogenbosch"])]
+    #[TestWith(["'t Zandt"])]
+    #[TestWith(['2e Exloërmond'])]
+    #[TestWith(['Graz,03.Bez.:Geidorf'])]
+    #[TestWith(['Dublin 6W'])]
+    #[TestWith(['München'])]
+    public function testInternationalValid(string $value): void
+    {
+        $this->assertValid($value, new City(international: true));
+    }
+
+    #[TestWith(['1234'])]
+    #[TestWith(['-Berlin'])]
+    #[TestWith(['Köln!'])]
+    #[TestWith(['Köln<br>'])]
+    public function testInternationalInvalid(string $value): void
+    {
+        $this->assertViolation(Assert\Regex::REGEX_FAILED_ERROR, $value, new City(international: true));
+    }
 }

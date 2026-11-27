@@ -9,6 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * House number such as "12", "12a", "12 A", "12-14", "12/1" or "7½".
+ * With $international also house names and foreign formats such as "Rose Cottage", "16 bis", "N8342" or "1:75".
  *
  * Composition (stops at the first failing rule):
  * NotBlank (if required) → Type(string|int) → Length → Regex
@@ -26,17 +27,29 @@ final class HouseNumber extends Assert\Compound
     public const DEFAULT_PATTERN = '/^\d{1,5}\s?(?:[a-zA-Z]|½)?(?:\s?[-\/]\s?(?:\d{1,5}\s?)?[a-zA-Z]?)?$/u';
 
     /**
+     * Wider than DEFAULT_PATTERN for international data: British house names ("Rose Cottage", "The Elms"),
+     * French "16 bis", Wisconsin grid numbers ("N8342") and Swedish "1:75". Has to start with a letter or
+     * digit and must not carry markup or query characters.
+     */
+    public const INTERNATIONAL_PATTERN = '/^[\p{L}\d][\p{L}\p{M}\d\s.,\'’\-\/:&()½]*$/u';
+
+    public string $pattern;
+
+    /**
      * @param int<1, max> $maxLength
      */
     #[HasNamedArguments]
     public function __construct(
         public bool $required = false,
         public int $maxLength = 15,
-        public string $pattern = self::DEFAULT_PATTERN,
+        public bool $international = false,
+        ?string $pattern = null,
         public string $message = 'This value is not a valid house number.',
         ?array $groups = null,
         mixed $payload = null,
     ) {
+        $this->pattern = $pattern ?? ($international ? self::INTERNATIONAL_PATTERN : self::DEFAULT_PATTERN);
+
         parent::__construct(null, $groups, $payload);
     }
 
